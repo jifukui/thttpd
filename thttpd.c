@@ -898,7 +898,6 @@ int main( int argc, char** argv )
 					if ( hs->listen4_fd != -1 )
 		    		{
 						fdwatch_del_fd( hs->listen4_fd );
-		** dropping through and processing existing connections.
 					}
 					if ( hs->listen6_fd != -1 )
 		    		{
