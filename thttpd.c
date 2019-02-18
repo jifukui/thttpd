@@ -1625,7 +1625,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    */
 	    	syslog( LOG_WARNING, "too many connections!" );
 	    	tmr_run( tvP );
-	    	eturn 0;
+	    	return 0;
 	    }
 		/* Get the first free connection entry off the free list. */
 		/*判断连接表是否工作正常*/
