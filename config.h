@@ -1,6 +1,6 @@
 /* config.h - configuration defines for thttpd and libhttpd
 **
-** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -59,7 +59,6 @@
 */
 #ifdef notdef
 /* Some sample patterns.  Allow programs only in one central directory: */
-/*定义CGI的匹配模式*/
 #define CGI_PATTERN "/cgi-bin/*"
 /* Allow programs in a central directory, or anywhere in a trusted
 ** user's tree: */
@@ -76,7 +75,6 @@
 ** or whatever.  If you don't want any limit, comment this out, but that's
 ** probably a really bad idea.
 */
-/*定义CGI处理程序的时间限制*/
 #define CGI_TIMELIMIT 30
 
 /* CONFIGURE: Maximum number of simultaneous CGI programs allowed.
@@ -92,12 +90,10 @@
 /* CONFIGURE: How many seconds to allow for reading the initial request
 ** on a new connection.
 */
-/*定义最长读时间*/
 #define IDLE_READ_TIMELIMIT 60
 
 /* CONFIGURE: How many seconds before an idle connection gets closed.
 */
-/*定义最长发送时间*/
 #define IDLE_SEND_TIMELIMIT 300
 
 /* CONFIGURE: The syslog facility to use.  Using this you can set up your
@@ -148,7 +144,6 @@
 ** You can override this in the config file with the "charset" setting,
 ** or on the command like with the -T flag.
 */
-/*默认字符集*/
 #define DEFAULT_CHARSET "UTF-8"
 
 

@@ -1,6 +1,6 @@
 /* mmc.c - mmap cache
 **
-** Copyright � 1998,2001,2014 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1998,2001,2014 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -87,7 +87,7 @@ typedef struct MapStruct {
     unsigned int hash;
     int hash_idx;
     struct MapStruct* next;
-} Map;
+    } Map;
 
 
 /* Globals. */
@@ -111,44 +111,37 @@ static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 
 
-void*mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
-{
+void*
+mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
+    {
     time_t now;
     struct stat sb;
     Map* m;
     int fd;
 
     /* Stat the file, if necessary. */
-	/*判断sbP是否为有效*/
     if ( sbP != (struct stat*) 0 )
-	{
-		sb = *sbP;
-	}
+	sb = *sbP;
     else
 	{
-		/*获取文件的属性*/
-		if ( stat( filename, &sb ) != 0 )
+	if ( stat( filename, &sb ) != 0 )
 	    {
-	    	syslog( LOG_ERR, "stat - %m" );
-	    	return (void*) 0;
+	    syslog( LOG_ERR, "stat - %m" );
+	    return (void*) 0;
 	    }
 	}
 
     /* Get the current time, if necessary. */
     if ( nowP != (struct timeval*) 0 )
-	{
-		now = nowP->tv_sec;
-	}
+	now = nowP->tv_sec;
     else
-	{
-		now = time( (time_t*) 0 );
-	}
+	now = time( (time_t*) 0 );
 
     /* See if we have it mapped already, via the hash table. */
     if ( check_hash_size() < 0 )
 	{
-		syslog( LOG_ERR, "check_hash_size() failure" );
-		return (void*) 0;
+	syslog( LOG_ERR, "check_hash_size() failure" );
+	return (void*) 0;
 	}
     m = find_hash( sb.st_ino, sb.st_dev, sb.st_size, sb.st_ctime );
     if ( m != (Map*) 0 )
@@ -271,7 +264,7 @@ void*mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 
     /* And return the address. */
     return m->addr;
-}
+    }
 
 
 void
@@ -306,7 +299,8 @@ mmc_unmap( void* addr, struct stat* sbP, struct timeval* nowP )
     }
 
 
-void mmc_cleanup( struct timeval* nowP )
+void
+mmc_cleanup( struct timeval* nowP )
     {
     time_t now;
     Map** mm;
@@ -399,28 +393,28 @@ really_unmap( Map** mm )
     hash_table[m->hash_idx] = (Map*) 0;
     }
 
-/*释放映射*/
-void mmc_term( void )
-{
+
+void
+mmc_term( void )
+    {
     Map* m;
 
     while ( maps != (Map*) 0 )
-	{
-		really_unmap( &maps );
-	}
+	really_unmap( &maps );
     while ( free_maps != (Map*) 0 )
 	{
-		m = free_maps;
-		free_maps = m->next;
-		--free_count;
-		free( (void*) m );
-		--alloc_count;
+	m = free_maps;
+	free_maps = m->next;
+	--free_count;
+	free( (void*) m );
+	--alloc_count;
 	}
-}
+    }
 
 
 /* Make sure the hash table is big enough. */
-static int check_hash_size( void )
+static int
+check_hash_size( void )
     {
     int i;
     Map* m;

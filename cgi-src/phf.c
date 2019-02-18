@@ -1,8 +1,14 @@
-/* match.c - simple shell-style filename matcher
+/* phf - cracker trap
 **
-** Only does ? * and **, and multiple patterns separated by |.  Returns 1 or 0.
+** Old distributions of the NCSA and Apache web servers included a
+** version of the phf program that had a bug.  The program could
+** easily be made to run arbitrary shell commands.  There is no real
+** legitimate use for phf, so any attempts to run it must be considered
+** to be attacks.  Accordingly, this version of phf logs the attack
+** and then returns a page indicating that phf doesn't exist.
 **
-** Copyright © 1995,2000 by Jef Poskanzer <jef@mail.acme.com>.
+**
+** Copyright © 1996 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -27,62 +33,37 @@
 ** SUCH DAMAGE.
 */
 
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 
-#include "match.h"
+#include "config.h"
 
-static int match_one( const char* pattern, int patternlen, const char* string );
+static char* argv0;
 
 int
-match( const char* pattern, const char* string )
+main( int argc, char* argv[] )
     {
-    const char* or;
+    char* cp;
 
-    for (;;)
-	{
-	or = strchr( pattern, '|' );
-	if ( or == (char*) 0 )
-	    return match_one( pattern, strlen( pattern ), string );
-	if ( match_one( pattern, or - pattern, string ) )
-	    return 1;
-	pattern = or + 1;
-	}
-    }
-
-
-static int
-match_one( const char* pattern, int patternlen, const char* string )
-    {
-    const char* p;
-
-    for ( p = pattern; p - pattern < patternlen; ++p, ++string )
-	{
-	if ( *p == '?' && *string != '\0' )
-	    continue;
-	if ( *p == '*' )
-	    {
-	    int i, pl;
-	    ++p;
-	    if ( *p == '*' )
-		{
-		/* Double-wildcard matches anything. */
-		++p;
-		i = strlen( string );
-		}
-	    else
-		/* Single-wildcard matches anything but slash. */
-		i = strcspn( string, "/" );
-	    pl = patternlen - ( p - pattern );
-	    for ( ; i >= 0; --i )
-		if ( match_one( p, pl, &(string[i]) ) )
-		    return 1;
-	    return 0;
-	    }
-	if ( *p != *string )
-	    return 0;
-	}
-    if ( *string == '\0' )
-	return 1;
-    return 0;
+    argv0 = argv[0];
+    cp = strrchr( argv0, '/' );
+    if ( cp != (char*) 0 )
+	++cp;
+    else
+	cp = argv0;
+    openlog( cp, LOG_NDELAY|LOG_PID, LOG_FACILITY );
+    syslog( LOG_CRIT, "phf CGI probe from %s", getenv( "REMOTE_ADDR" ) );
+    (void) printf( "\
+Content-type: text/html\n\
+Status: 404/html\n\
+\n\
+<HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD>\n\
+<BODY><H2>404 Not Found</H2>\n\
+The requested object does not exist on this server.\n\
+The link you followed is either outdated, inaccurate,\n\
+or the server has been instructed not to let you have it.\n\
+</BODY></HTML>\n" );
+    exit( 0 );
     }

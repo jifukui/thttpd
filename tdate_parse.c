@@ -1,6 +1,6 @@
 /* tdate_parse - parse string dates into internal form, stripped-down version
 **
-** Copyright � 1995 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -48,60 +48,56 @@ struct strlong {
     long l;
     };
 
-/*将字符串的大写字母转换为小写字母*/
-static void pound_case( char* str )
-{
+
+static void
+pound_case( char* str )
+    {
     for ( ; *str != '\0'; ++str )
 	{
-		if ( isupper( (int) *str ) )
-	    {
-			*str = tolower( (int) *str );
-		}
+	if ( isupper( (int) *str ) )
+	    *str = tolower( (int) *str );
 	}
-}
+    }
 
-/*比较两个字符串是否相等*/
-static int strlong_compare( const void* v1, const void* v2 )
-{
+
+static int
+strlong_compare( const void* v1, const void* v2 )
+    {
     const struct strlong* s1 = (const struct strlong*) v1;
     const struct strlong* s2 = (const struct strlong*) v2;
     return strcmp( s1->s, s2->s );
-}
+    }
 
 
-static int strlong_search( char* str, struct strlong* tab, int n, long* lP )
-{
+static int
+strlong_search( char* str, struct strlong* tab, int n, long* lP )
+    {
     int i, h, l, r;
 
     l = 0;
     h = n - 1;
     for (;;)
 	{
-		i = ( h + l ) / 2;
-		r = strcmp( str, tab[i].s );
-		if ( r < 0 )
-	   	{
-		    h = i - 1;
-	   	}
-		else if ( r > 0 )
+	i = ( h + l ) / 2;
+	r = strcmp( str, tab[i].s );
+	if ( r < 0 )
+	    h = i - 1;
+	else if ( r > 0 )
+	    l = i + 1;
+	else
 	    {
-			l = i + 1;
-		}
-		else
-	    {
-	    	*lP = tab[i].l;
-	    	return 1;
+	    *lP = tab[i].l;
+	    return 1;
 	    }
-		if ( h < l )
-	    {
-			return 0;
-		}
+	if ( h < l )
+	    return 0;
 	}
-}
+    }
 
 
-static int scan_wday( char* str_wday, long* tm_wdayP )
-{
+static int
+scan_wday( char* str_wday, long* tm_wdayP )
+    {
     static struct strlong wday_tab[] = {
 	{ "sun", 0 }, { "sunday", 0 },
 	{ "mon", 1 }, { "monday", 1 },
@@ -115,16 +111,20 @@ static int scan_wday( char* str_wday, long* tm_wdayP )
 
     if ( ! sorted )
 	{
-		(void) qsort(wday_tab, sizeof(wday_tab)/sizeof(struct strlong),sizeof(struct strlong), strlong_compare );
-		sorted = 1;
+	(void) qsort(
+	    wday_tab, sizeof(wday_tab)/sizeof(struct strlong),
+	    sizeof(struct strlong), strlong_compare );
+	sorted = 1;
 	}
     pound_case( str_wday );
-    return strlong_search(str_wday, wday_tab, sizeof(wday_tab)/sizeof(struct strlong), tm_wdayP );
-}
+    return strlong_search(
+	str_wday, wday_tab, sizeof(wday_tab)/sizeof(struct strlong), tm_wdayP );
+    }
 
 
-static int scan_mon( char* str_mon, long* tm_monP )
-{
+static int
+scan_mon( char* str_mon, long* tm_monP )
+    {
     static struct strlong mon_tab[] = {
 	{ "jan", 0 }, { "january", 0 },
 	{ "feb", 1 }, { "february", 1 },
@@ -143,23 +143,28 @@ static int scan_mon( char* str_mon, long* tm_monP )
 
     if ( ! sorted )
 	{
-		(void) qsort(mon_tab, sizeof(mon_tab)/sizeof(struct strlong),sizeof(struct strlong), strlong_compare );
-		sorted = 1;
+	(void) qsort(
+	    mon_tab, sizeof(mon_tab)/sizeof(struct strlong),
+	    sizeof(struct strlong), strlong_compare );
+	sorted = 1;
 	}
     pound_case( str_mon );
-    return strlong_search(str_mon, mon_tab, sizeof(mon_tab)/sizeof(struct strlong), tm_monP );
-}
+    return strlong_search(
+	str_mon, mon_tab, sizeof(mon_tab)/sizeof(struct strlong), tm_monP );
+    }
 
-/*是否是闰年*/
-static int is_leap( int year )
-{
+
+static int
+is_leap( int year )
+    {
     return year % 400? ( year % 100 ? ( year % 4 ? 0 : 1 ) : 0 ) : 1;
-}
+    }
 
 
 /* Basically the same as mktime(). */
-static time_t tm_to_time( struct tm* tmP )
-{
+static time_t
+tm_to_time( struct tm* tmP )
+    {
     time_t t;
     static int monthtab[12] = {
 	0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
@@ -181,10 +186,11 @@ static time_t tm_to_time( struct tm* tmP )
     t = t * 60 + tmP->tm_sec;
 
     return t;
-}
+    }
 
 
-time_t tdate_parse( char* str )
+time_t
+tdate_parse( char* str )
     {
     struct tm tm;
     char* cp;

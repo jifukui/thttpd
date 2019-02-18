@@ -1,6 +1,6 @@
 /* thttpd.c - tiny/turbo/throttling HTTP server
 **
-** Copyright � 1995,1998,1999,2000,2001,2015 by
+** Copyright � 1995,1998,1999,2000,2001,2015 by
 ** Jef Poskanzer <jef@mail.acme.com>. All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -89,51 +89,46 @@ static char* charset;
 static char* p3p;
 static int max_age;
 
-/**调节表结构体*/
+
 typedef struct {
     char* pattern;
     long max_limit, min_limit;
     long rate;
     off_t bytes_since_avg;
     int num_sending;
-} throttletab;
-
+    } throttletab;
 static throttletab* throttles;
 static int numthrottles, maxthrottles;
 
 #define THROTTLE_NOLIMIT -1
 
-/**连接表结构体*/
+
 typedef struct {
-    int conn_state;										//连接状态
-    int next_free_connect;								//下一个可用的连接表索引
-    httpd_conn* hc;										//http连接对象
-    int tnums[MAXTHROTTLENUMS];         				/* throttle indexes */
+    int conn_state;
+    int next_free_connect;
+    httpd_conn* hc;
+    int tnums[MAXTHROTTLENUMS];         /* throttle indexes */
     int numtnums;
-    long max_limit;
-	long min_limit;
-    time_t started_at;
-	time_t active_at;
+    long max_limit, min_limit;
+    time_t started_at, active_at;
     Timer* wakeup_timer;
     Timer* linger_timer;
     long wouldblock_delay;
     off_t bytes;
     off_t end_byte_index;
     off_t next_byte_index;
-} connecttab;
+    } connecttab;
 static connecttab* connects;
-static int num_connects;		//连接数量
-static int max_connects;		//最大连接数量
-static int first_free_connect;	//第一个可用的连接
-static int httpd_conn_count;	//http连接数量
+static int num_connects, max_connects, first_free_connect;
+static int httpd_conn_count;
 
 /* The connection states. */
-#define CNST_FREE 0				//连接表空闲状态
-#define CNST_READING 1			//连接表处于读数据状态
-#define CNST_SENDING 2			//连接表处于发送数据状态
-#define CNST_PAUSING 3			//连接表处于暂停状态
-#define CNST_LINGERING 4		//链接表处于
-/**连接状态*/
+#define CNST_FREE 0
+#define CNST_READING 1
+#define CNST_SENDING 2
+#define CNST_PAUSING 3
+#define CNST_LINGERING 4
+
 
 static httpd_server* hs = (httpd_server*) 0;
 int terminate = 0;
@@ -142,9 +137,7 @@ long stats_connections;
 off_t stats_bytes;
 int stats_simultaneous;
 
-static volatile int got_hup;
-static volatile int got_usr1;
-static volatile int watchdog_flag;
+static volatile int got_hup, got_usr1, watchdog_flag;
 
 
 /* Forwards. */
@@ -179,21 +172,22 @@ static void thttpd_logstats( long secs );
 
 
 /* SIGTERM and SIGINT say to exit immediately. */
-/*退出处理*/
-static void handle_term( int sig )
-{
+static void
+handle_term( int sig )
+    {
     /* Don't need to set up the handler again, since it's a one-shot. */
 
     shut_down();
     syslog( LOG_NOTICE, "exiting due to signal %d", sig );
     closelog();
     exit( 1 );
-}
+    }
 
 
 /* SIGCHLD - a chile process exitted, so we need to reap the zombie */
-static void handle_chld( int sig )
-{
+static void
+handle_chld( int sig )
+    {
     const int oerrno = errno;
     pid_t pid;
     int status;
@@ -207,28 +201,22 @@ static void handle_chld( int sig )
     for (;;)
 	{
 #ifdef HAVE_WAITPID
-		pid = waitpid( (pid_t) -1, &status, WNOHANG );
+	pid = waitpid( (pid_t) -1, &status, WNOHANG );
 #else /* HAVE_WAITPID */
-		pid = wait3( &status, WNOHANG, (struct rusage*) 0 );
+	pid = wait3( &status, WNOHANG, (struct rusage*) 0 );
 #endif /* HAVE_WAITPID */
-		if ( (int) pid == 0 )		/* none left */
+	if ( (int) pid == 0 )		/* none left */
+	    break;
+	if ( (int) pid < 0 )
 	    {
-			break;
-		}
-		if ( (int) pid < 0 )
-	    {
-	    	if ( errno == EINTR || errno == EAGAIN )
-			{
-				continue;
-			}
+	    if ( errno == EINTR || errno == EAGAIN )
+		continue;
 	    /* ECHILD shouldn't happen with the WNOHANG option,
 	    ** but with some kernels it does anyway.  Ignore it.
 	    */
-	    	if ( errno != ECHILD )
-			{
-				syslog( LOG_ERR, "child wait - %m" );
-			}
-	    	break;
+	    if ( errno != ECHILD )
+		syslog( LOG_ERR, "child wait - %m" );
+	    break;
 	    }
 	/* Decrement the CGI count.  Note that this is not accurate, since
 	** each CGI can involve two or even three child processes.
@@ -236,24 +224,23 @@ static void handle_chld( int sig )
 	** activity, the count will be lower than it should be, and therefore
 	** more CGIs will be allowed than should be.
 	*/
-		if ( hs != (httpd_server*) 0 )
+	if ( hs != (httpd_server*) 0 )
 	    {
-	    	--hs->cgi_count;
-	    	if ( hs->cgi_count < 0 )
-			{
-				hs->cgi_count = 0;
-			}
+	    --hs->cgi_count;
+	    if ( hs->cgi_count < 0 )
+		hs->cgi_count = 0;
 	    }
 	}
 
     /* Restore previous errno. */
     errno = oerrno;
-}
+    }
 
 
 /* SIGHUP says to re-open the log file. */
-static void handle_hup( int sig )
-{
+static void
+handle_hup( int sig )
+    {
     const int oerrno = errno;
 
 #ifndef HAVE_SIGSET
@@ -266,12 +253,13 @@ static void handle_hup( int sig )
 
     /* Restore previous errno. */
     errno = oerrno;
-}
+    }
 
 
 /* SIGUSR1 says to exit as soon as all current connections are done. */
-static void handle_usr1( int sig )
-{
+static void
+handle_usr1( int sig )
+    {
     /* Don't need to set up the handler again, since it's a one-shot. */
 
     if ( num_connects == 0 )
@@ -280,22 +268,23 @@ static void handle_usr1( int sig )
 	** here.  Not only is it faster, but without any connections the
 	** main loop won't wake up until the next new connection.
 	*/
-		shut_down();
-		syslog( LOG_NOTICE, "exiting" );
-		closelog();
-		exit( 0 );
+	shut_down();
+	syslog( LOG_NOTICE, "exiting" );
+	closelog();
+	exit( 0 );
 	}
 
     /* Otherwise, just set a flag that we got the signal. */
     got_usr1 = 1;
 
     /* Don't need to restore old errno, since we didn't do any syscalls. */
-}
+    }
 
 
 /* SIGUSR2 says to generate the stats syslogs immediately. */
-static void handle_usr2( int sig )
-{
+static void
+handle_usr2( int sig )
+    {
     const int oerrno = errno;
 
 #ifndef HAVE_SIGSET
@@ -307,23 +296,22 @@ static void handle_usr2( int sig )
 
     /* Restore previous errno. */
     errno = oerrno;
-}
+    }
 
 
 /* SIGALRM is used as a watchdog. */
-/*设置对闹钟定时器的处理*/
-static void handle_alrm( int sig )
-{
+static void
+handle_alrm( int sig )
+    {
     const int oerrno = errno;
 
     /* If nothing has been happening */
     if ( ! watchdog_flag )
 	{
-		/* Try changing dirs to someplace we can write. */
-		(void) chdir( "/tmp" );
-		/* Dump core. */
-		/*异常终止此程序*/
-		abort();
+	/* Try changing dirs to someplace we can write. */
+	(void) chdir( "/tmp" );
+	/* Dump core. */
+	abort();
 	}
     watchdog_flag = 0;
 
@@ -336,36 +324,36 @@ static void handle_alrm( int sig )
 
     /* Restore previous errno. */
     errno = oerrno;
-}
+    }
 
 
-static void re_open_logfile( void )
-{
+static void
+re_open_logfile( void )
+    {
     FILE* logfp;
 
     if ( no_log || hs == (httpd_server*) 0 )
-	{
-		return;
-	}
+	return;
 
     /* Re-open the log file. */
     if ( logfile != (char*) 0 && strcmp( logfile, "-" ) != 0 )
 	{
-		syslog( LOG_NOTICE, "re-opening logfile" );
-		logfp = fopen( logfile, "a" );
-		if ( logfp == (FILE*) 0 )
+	syslog( LOG_NOTICE, "re-opening logfile" );
+	logfp = fopen( logfile, "a" );
+	if ( logfp == (FILE*) 0 )
 	    {
-	    	syslog( LOG_CRIT, "re-opening %.80s - %m", logfile );
-	    	return;
+	    syslog( LOG_CRIT, "re-opening %.80s - %m", logfile );
+	    return;
 	    }
-		(void) fcntl( fileno( logfp ), F_SETFD, 1 );
-		httpd_set_logfp( hs, logfp );
+	(void) fcntl( fileno( logfp ), F_SETFD, 1 );
+	httpd_set_logfp( hs, logfp );
 	}
-}
+    }
 
-/*主函数*/
-int main( int argc, char** argv )
-{
+
+int
+main( int argc, char** argv )
+    {
     char* cp;
     struct passwd* pwd;
     uid_t uid = 32767;
@@ -380,23 +368,17 @@ int main( int argc, char** argv )
     httpd_sockaddr sa6;
     int gotv4, gotv6;
     struct timeval tv;
-	//argv[0]的值为程序路径
+
     argv0 = argv[0];
-	/*获取此字符出现的位置开始的字符*/
+
     cp = strrchr( argv0, '/' );
     if ( cp != (char*) 0 )
-	{
-		++cp;
-	}
+	++cp;
     else
-	{
-		cp = argv0;
-	}
-	/*打开系统记录文件*/
+	cp = argv0;
     openlog( cp, LOG_NDELAY|LOG_PID, LOG_FACILITY );
 
     /* Handle command-line arguments. */
-	/*处理命令行*/
     parse_args( argc, argv );
 
     /* Read zone info now, in case we chroot(). */
@@ -406,9 +388,9 @@ int main( int argc, char** argv )
     lookup_hostname( &sa4, sizeof(sa4), &gotv4, &sa6, sizeof(sa6), &gotv6 );
     if ( ! ( gotv4 || gotv6 ) )
 	{
-		syslog( LOG_ERR, "can't find any valid address" );
-		(void) fprintf( stderr, "%s: can't find any valid address\n", argv0 );
-		exit( 1 );
+	syslog( LOG_ERR, "can't find any valid address" );
+	(void) fprintf( stderr, "%s: can't find any valid address\n", argv0 );
+	exit( 1 );
 	}
 
     /* Throttle file. */
@@ -416,83 +398,73 @@ int main( int argc, char** argv )
     maxthrottles = 0;
     throttles = (throttletab*) 0;
     if ( throttlefile != (char*) 0 )
-	{
-		read_throttlefile( throttlefile );
-	}
+	read_throttlefile( throttlefile );
 
     /* If we're root and we're going to become another user, get the uid/gid
     ** now.
     */
-   //函数返回一个调用程序的真实用户ID，如果是root用户此函数返回0
-   /**对于特权用户的处理*/
     if ( getuid() == 0 )
 	{
-		/*函数功能是获取用户登录相关信息*/
-		pwd = getpwnam( user );
-		/***/
-		if ( pwd == (struct passwd*) 0 )
+	pwd = getpwnam( user );
+	if ( pwd == (struct passwd*) 0 )
 	    {
-	    	syslog( LOG_CRIT, "unknown user - '%.80s'", user );
-	    	(void) fprintf( stderr, "%s: unknown user - '%s'\n", argv0, user );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "unknown user - '%.80s'", user );
+	    (void) fprintf( stderr, "%s: unknown user - '%s'\n", argv0, user );
+	    exit( 1 );
 	    }
-		uid = pwd->pw_uid;
-		gid = pwd->pw_gid;
+	uid = pwd->pw_uid;
+	gid = pwd->pw_gid;
 	}
 
     /* Log file. */
     if ( logfile != (char*) 0 )
 	{
-		if ( strcmp( logfile, "/dev/null" ) == 0 )
+	if ( strcmp( logfile, "/dev/null" ) == 0 )
 	    {
-	    	no_log = 1;
-	    	logfp = (FILE*) 0;
+	    no_log = 1;
+	    logfp = (FILE*) 0;
 	    }
-		else if ( strcmp( logfile, "-" ) == 0 )
+	else if ( strcmp( logfile, "-" ) == 0 )
+	    logfp = stdout;
+	else
 	    {
-			logfp = stdout;
+	    logfp = fopen( logfile, "a" );
+	    if ( logfp == (FILE*) 0 )
+		{
+		syslog( LOG_CRIT, "%.80s - %m", logfile );
+		perror( logfile );
+		exit( 1 );
 		}
-		else
-	    {
-	    	logfp = fopen( logfile, "a" );
-	    	if ( logfp == (FILE*) 0 )
-			{
-				syslog( LOG_CRIT, "%.80s - %m", logfile );
-				perror( logfile );
-				exit( 1 );
-			}
-	    	if ( logfile[0] != '/' )
-			{
-				syslog( LOG_WARNING, "logfile is not an absolute path, you may not be able to re-open it" );
-				(void) fprintf( stderr, "%s: logfile is not an absolute path, you may not be able to re-open it\n", argv0 );
-			}
-	    	(void) fcntl( fileno( logfp ), F_SETFD, 1 );
-	    	if ( getuid() == 0 )
-			{
-				/* If we are root then we chown the log file to the user we'll
-				** be switching to.
-				*/
-				if ( fchown( fileno( logfp ), uid, gid ) < 0 )
-		    	{
-		    		syslog( LOG_WARNING, "fchown logfile - %m" );
-		    		perror( "fchown logfile" );
-		    	}
-			}
+	    if ( logfile[0] != '/' )
+		{
+		syslog( LOG_WARNING, "logfile is not an absolute path, you may not be able to re-open it" );
+		(void) fprintf( stderr, "%s: logfile is not an absolute path, you may not be able to re-open it\n", argv0 );
+		}
+	    (void) fcntl( fileno( logfp ), F_SETFD, 1 );
+	    if ( getuid() == 0 )
+		{
+		/* If we are root then we chown the log file to the user we'll
+		** be switching to.
+		*/
+		if ( fchown( fileno( logfp ), uid, gid ) < 0 )
+		    {
+		    syslog( LOG_WARNING, "fchown logfile - %m" );
+		    perror( "fchown logfile" );
+		    }
+		}
 	    }
 	}
     else
-	{
-		logfp = (FILE*) 0;
-	}
+	logfp = (FILE*) 0;
 
     /* Switch directories if requested. */
     if ( dir != (char*) 0 )
 	{
-		if ( chdir( dir ) < 0 )
+	if ( chdir( dir ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "chdir - %m" );
-	    	perror( "chdir" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "chdir - %m" );
+	    perror( "chdir" );
+	    exit( 1 );
 	    }
 	}
 #ifdef USE_USER_DIR
@@ -502,57 +474,49 @@ int main( int argc, char** argv )
 	** USE_USER_DIR option is set - switch to the specified user's
 	** home dir.
 	*/
-		if ( chdir( pwd->pw_dir ) < 0 )
+	if ( chdir( pwd->pw_dir ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "chdir - %m" );
-	    	perror( "chdir" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "chdir - %m" );
+	    perror( "chdir" );
+	    exit( 1 );
 	    }
 	}
 #endif /* USE_USER_DIR */
 
     /* Get current directory. */
-	/*获取当前程序的当前工作路径*/
     (void) getcwd( cwd, sizeof(cwd) - 1 );
     if ( cwd[strlen( cwd ) - 1] != '/' )
-	{
-		(void) strcat( cwd, "/" );
-	}
+	(void) strcat( cwd, "/" );
 
     if ( ! debug )
 	{
 	/* We're not going to use stdin stdout or stderr from here on, so close
 	** them to save file descriptors.
 	*/
-		/*关闭标准输入标准输出和标准错误*/
-		(void) fclose( stdin );
-		if ( logfp != stdout )
-	    {
-			(void) fclose( stdout );
-		}
-		(void) fclose( stderr );
+	(void) fclose( stdin );
+	if ( logfp != stdout )
+	    (void) fclose( stdout );
+	(void) fclose( stderr );
 
 	/* Daemonize - make ourselves a subprocess. */
 #ifdef HAVE_DAEMON
-		/*创建守护程序如果第一个参数为0设置根目录为当前目录如果第二个参数为0设置标准输入标准输出标准错误到/dev/null*/
-		if ( daemon( 1, 1 ) < 0 )
+	if ( daemon( 1, 1 ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "daemon - %m" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "daemon - %m" );
+	    exit( 1 );
 	    }
 #else /* HAVE_DAEMON */
-		switch ( fork() )
+	switch ( fork() )
 	    {
-	    	case 0:
-	    		break;
-	    	case -1:
-	    		syslog( LOG_CRIT, "fork - %m" );
-	    		exit( 1 );
-	    	default:
-	    		exit( 0 );
+	    case 0:
+	    break;
+	    case -1:
+	    syslog( LOG_CRIT, "fork - %m" );
+	    exit( 1 );
+	    default:
+	    exit( 0 );
 	    }
 #ifdef HAVE_SETSID
-		/*创建一个新的会话id当父程序退出时子程序不受影响*/
         (void) setsid();
 #endif /* HAVE_SETSID */
 #endif /* HAVE_DAEMON */
@@ -566,91 +530,83 @@ int main( int argc, char** argv )
         (void) setsid();
 #endif /* HAVE_SETSID */
 	}
-	/*如果没有设置进程ID*/
+
     if ( pidfile != (char*) 0 )
 	{
 	/* Write the PID file. */
-		FILE* pidfp = fopen( pidfile, "w" );
-		if ( pidfp == (FILE*) 0 )
+	FILE* pidfp = fopen( pidfile, "w" );
+	if ( pidfp == (FILE*) 0 )
 	    {
-	    	syslog( LOG_CRIT, "%.80s - %m", pidfile );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "%.80s - %m", pidfile );
+	    exit( 1 );
 	    }
-		/*获取进程ID*/
-		(void) fprintf( pidfp, "%d\n", (int) getpid() );
-		(void) fclose( pidfp );
+	(void) fprintf( pidfp, "%d\n", (int) getpid() );
+	(void) fclose( pidfp );
 	}
 
     /* Initialize the fdwatch package.  Have to do this before chroot,
     ** if /dev/poll is used.
     */
-   	/*当前的状况是最大的连接数量为22个连接*/
     max_connects = fdwatch_get_nfiles();
     if ( max_connects < 0 )
 	{
-		syslog( LOG_CRIT, "fdwatch initialization failure" );
-		exit( 1 );
+	syslog( LOG_CRIT, "fdwatch initialization failure" );
+	exit( 1 );
 	}
     max_connects -= SPARE_FDS;
 
     /* Chroot if requested. */
-	/*是否切换根目录*/
     if ( do_chroot )
 	{
-		/*改变系统的根目录*/
-		if ( chroot( cwd ) < 0 )
+	if ( chroot( cwd ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "chroot - %m" );
-	    	perror( "chroot" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "chroot - %m" );
+	    perror( "chroot" );
+	    exit( 1 );
 	    }
 	/* If we're logging and the logfile's pathname begins with the
 	** chroot tree's pathname, then elide the chroot pathname so
 	** that the logfile pathname still works from inside the chroot
 	** tree.
 	*/
-		if ( logfile != (char*) 0 && strcmp( logfile, "-" ) != 0 )
+	if ( logfile != (char*) 0 && strcmp( logfile, "-" ) != 0 )
 	    {
-			/*判断log文件是否处于当前的目录下*/
-	    	if ( strncmp( logfile, cwd, strlen( cwd ) ) == 0 )
-			{
-				/*内存搬移*/
-				(void) ol_strcpy( logfile, &logfile[strlen( cwd ) - 1] );
-			/* (We already guaranteed that cwd ends with a slash, so leaving
-			** that slash in logfile makes it an absolute pathname within
-			** the chroot tree.)
-			*/
-			}
-	    	else
-			{
-				syslog( LOG_WARNING, "logfile is not within the chroot tree, you will not be able to re-open it" );
-				(void) fprintf( stderr, "%s: logfile is not within the chroot tree, you will not be able to re-open it\n", argv0 );
-			}
+	    if ( strncmp( logfile, cwd, strlen( cwd ) ) == 0 )
+		{
+		(void) ol_strcpy( logfile, &logfile[strlen( cwd ) - 1] );
+		/* (We already guaranteed that cwd ends with a slash, so leaving
+		** that slash in logfile makes it an absolute pathname within
+		** the chroot tree.)
+		*/
+		}
+	    else
+		{
+		syslog( LOG_WARNING, "logfile is not within the chroot tree, you will not be able to re-open it" );
+		(void) fprintf( stderr, "%s: logfile is not within the chroot tree, you will not be able to re-open it\n", argv0 );
+		}
 	    }
-		/*设置cwd的值为'/'*/
-		(void) strcpy( cwd, "/" );
-		/* Always chdir to / after a chroot. */
-		if ( chdir( cwd ) < 0 )
+	(void) strcpy( cwd, "/" );
+	/* Always chdir to / after a chroot. */
+	if ( chdir( cwd ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "chroot chdir - %m" );
-	    	perror( "chroot chdir" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "chroot chdir - %m" );
+	    perror( "chroot chdir" );
+	    exit( 1 );
 	    }
 	}
 
     /* Switch directories again if requested. */
     if ( data_dir != (char*) 0 )
 	{
-		if ( chdir( data_dir ) < 0 )
+	if ( chdir( data_dir ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "data_dir chdir - %m" );
-	    	perror( "data_dir chdir" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "data_dir chdir - %m" );
+	    perror( "data_dir chdir" );
+	    exit( 1 );
 	    }
 	}
 
-/* Set up to catch signals. */
-/**程序对于信号的处理*/
+    /* Set up to catch signals. */
 #ifdef HAVE_SIGSET
     (void) sigset( SIGTERM, handle_term );
     (void) sigset( SIGINT, handle_term );
@@ -673,56 +629,50 @@ int main( int argc, char** argv )
     got_hup = 0;
     got_usr1 = 0;
     watchdog_flag = 0;
-	/*设置闹钟函数*/
     (void) alarm( OCCASIONAL_TIME * 3 );
 
     /* Initialize the timer package. */
-	/*初始化计时器*/
     tmr_init();
 
     /* Initialize the HTTP layer.  Got to do this before giving up root,
     ** so that we can bind to a privileged port.
     */
-	/*初始化HTTP*/
     hs = httpd_initialize(
 	hostname,
 	gotv4 ? &sa4 : (httpd_sockaddr*) 0, gotv6 ? &sa6 : (httpd_sockaddr*) 0,
 	port, cgi_pattern, cgi_limit, charset, p3p, max_age, cwd, no_log, logfp,
 	no_symlink_check, do_vhost, do_global_passwd, url_pattern,
 	local_pattern, no_empty_referrers );
-	/*如果初始化http服务器失败退出*/
     if ( hs == (httpd_server*) 0 )
-	{
-		exit( 1 );
-	}
+	exit( 1 );
 
     /* Set up the occasional timer. */
     if ( tmr_create( (struct timeval*) 0, occasional, JunkClientData, OCCASIONAL_TIME * 1000L, 1 ) == (Timer*) 0 )
 	{
-		syslog( LOG_CRIT, "tmr_create(occasional) failed" );
-		exit( 1 );
+	syslog( LOG_CRIT, "tmr_create(occasional) failed" );
+	exit( 1 );
 	}
     /* Set up the idle timer. */
     if ( tmr_create( (struct timeval*) 0, idle, JunkClientData, 5 * 1000L, 1 ) == (Timer*) 0 )
 	{
-		syslog( LOG_CRIT, "tmr_create(idle) failed" );
-		exit( 1 );
+	syslog( LOG_CRIT, "tmr_create(idle) failed" );
+	exit( 1 );
 	}
     if ( numthrottles > 0 )
 	{
 	/* Set up the throttles timer. */
-		if ( tmr_create( (struct timeval*) 0, update_throttles, JunkClientData, THROTTLE_TIME * 1000L, 1 ) == (Timer*) 0 )
+	if ( tmr_create( (struct timeval*) 0, update_throttles, JunkClientData, THROTTLE_TIME * 1000L, 1 ) == (Timer*) 0 )
 	    {
-	    	syslog( LOG_CRIT, "tmr_create(update_throttles) failed" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "tmr_create(update_throttles) failed" );
+	    exit( 1 );
 	    }
 	}
 #ifdef STATS_TIME
     /* Set up the stats timer. */
     if ( tmr_create( (struct timeval*) 0, show_stats, JunkClientData, STATS_TIME * 1000L, 1 ) == (Timer*) 0 )
 	{
-		syslog( LOG_CRIT, "tmr_create(show_stats) failed" );
-		exit( 1 );
+	syslog( LOG_CRIT, "tmr_create(show_stats) failed" );
+	exit( 1 );
 	}
 #endif /* STATS_TIME */
     start_time = stats_time = time( (time_t*) 0 );
@@ -734,190 +684,158 @@ int main( int argc, char** argv )
     if ( getuid() == 0 )
 	{
 	/* Set aux groups to null. */
-		if ( setgroups( 0, (const gid_t*) 0 ) < 0 )
+	if ( setgroups( 0, (const gid_t*) 0 ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "setgroups - %m" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "setgroups - %m" );
+	    exit( 1 );
 	    }
 	/* Set primary group. */
-		if ( setgid( gid ) < 0 )
+	if ( setgid( gid ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "setgid - %m" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "setgid - %m" );
+	    exit( 1 );
 	    }
 	/* Try setting aux groups correctly - not critical if this fails. */
-		if ( initgroups( user, gid ) < 0 )
-	   	{
-		    syslog( LOG_WARNING, "initgroups - %m" );
-	   	}
+	if ( initgroups( user, gid ) < 0 )
+	    syslog( LOG_WARNING, "initgroups - %m" );
 #ifdef HAVE_SETLOGIN
 	/* Set login name. */
         (void) setlogin( user );
 #endif /* HAVE_SETLOGIN */
 	/* Set uid. */
-		if ( setuid( uid ) < 0 )
+	if ( setuid( uid ) < 0 )
 	    {
-	    	syslog( LOG_CRIT, "setuid - %m" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "setuid - %m" );
+	    exit( 1 );
 	    }
 	/* Check for unnecessary security exposure. */
-		if ( ! do_chroot )
-	    {
-			syslog(LOG_WARNING,"started as root without requesting chroot(), warning only" );
-		}
+	if ( ! do_chroot )
+	    syslog(
+		LOG_WARNING,
+		"started as root without requesting chroot(), warning only" );
 	}
 
     /* Initialize our connections table. */
-	/*初始化http的连接表*/
     connects = NEW( connecttab, max_connects );
     if ( connects == (connecttab*) 0 )
 	{
-		syslog( LOG_CRIT, "out of memory allocating a connecttab" );
-		exit( 1 );
+	syslog( LOG_CRIT, "out of memory allocating a connecttab" );
+	exit( 1 );
 	}
     for ( cnum = 0; cnum < max_connects; ++cnum )
 	{
-		connects[cnum].conn_state = CNST_FREE;
-		connects[cnum].next_free_connect = cnum + 1;
-		connects[cnum].hc = (httpd_conn*) 0;
+	connects[cnum].conn_state = CNST_FREE;
+	connects[cnum].next_free_connect = cnum + 1;
+	connects[cnum].hc = (httpd_conn*) 0;
 	}
     connects[max_connects - 1].next_free_connect = -1;	/* end of link list */
-	/*当前连接*/
     first_free_connect = 0;
-	/*连接数量*/
     num_connects = 0;
-	/*HTTP连接数量*/
     httpd_conn_count = 0;
 
     if ( hs != (httpd_server*) 0 )
 	{
-		if ( hs->listen4_fd != -1 )
-	    {
-			fdwatch_add_fd( hs->listen4_fd, (void*) 0, FDW_READ );
-		}
-		if ( hs->listen6_fd != -1 )
-	    {
-			fdwatch_add_fd( hs->listen6_fd, (void*) 0, FDW_READ );
-		}
+	if ( hs->listen4_fd != -1 )
+	    fdwatch_add_fd( hs->listen4_fd, (void*) 0, FDW_READ );
+	if ( hs->listen6_fd != -1 )
+	    fdwatch_add_fd( hs->listen6_fd, (void*) 0, FDW_READ );
 	}
 
     /* Main loop. */
-	/**获取当前程序的运行的时间，第一个参数返回获取的时间，第二个参数用于设置时区*/
     (void) gettimeofday( &tv, (struct timezone*) 0 );
-	/**程序第一次执行是设置terminate的值为0，num_connects的值为HTTP已经使用的连接数量*/
     while ( ( ! terminate ) || num_connects > 0 )
 	{
-		/* Do we need to re-open the log file? */
-		if ( got_hup )
+	/* Do we need to re-open the log file? */
+	if ( got_hup )
 	    {
-			/*重新打开log文件*/
-	    	re_open_logfile();
-	    	got_hup = 0;
+	    re_open_logfile();
+	    got_hup = 0;
 	    }
 
-		/* Do the fd watch. */
-		/**判断状态大于0准备好，0超时，-1错误*/
-		num_ready = fdwatch( tmr_mstimeout( &tv ) );
-		/**遇到计时器为空时的处理*/
-		if ( num_ready < 0 )
+	/* Do the fd watch. */
+	num_ready = fdwatch( tmr_mstimeout( &tv ) );
+	if ( num_ready < 0 )
 	    {
-	    	if ( errno == EINTR || errno == EAGAIN )
-			{
-				continue;       /* try again */
-			}
-	    	syslog( LOG_ERR, "fdwatch - %m" );
-	    	exit( 1 );
+	    if ( errno == EINTR || errno == EAGAIN )
+		continue;       /* try again */
+	    syslog( LOG_ERR, "fdwatch - %m" );
+	    exit( 1 );
 	    }
-		(void) gettimeofday( &tv, (struct timezone*) 0 );
-		/*对于计时器数组中有超时的处理*/
-		if ( num_ready == 0 )
+	(void) gettimeofday( &tv, (struct timezone*) 0 );
+
+	if ( num_ready == 0 )
 	    {
-	    	/* No fd's are ready - run the timers. */
-			/**继续运行计时器程序，对于超时的进行处理*/
-	    	tmr_run( &tv );
-	    	continue;
-	    }
-		/*连接处理*/
-		/* Is it a new connection? */
-		/**对IPV6进行处理*/
-		if ( hs != (httpd_server*) 0 && hs->listen6_fd != -1 &&fdwatch_check_fd( hs->listen6_fd ) )
-	    {
-	    	if ( handle_newconnect( &tv, hs->listen6_fd ) )
-			/* Go around the loop and do another fdwatch, rather than
-			** New connections always get priority.
-			*/
-			{
-				continue;
-			}
-	    }
-		if ( hs != (httpd_server*) 0 && hs->listen4_fd != -1 &&fdwatch_check_fd( hs->listen4_fd ) )
-	    {
-	    	if ( handle_newconnect( &tv, hs->listen4_fd ) )
-			/* Go around the loop and do another fdwatch, rather than
-			** dropping through and processing existing connections.
-			** New connections always get priority.
-			*/
-			{
-				continue;
-			}
+	    /* No fd's are ready - run the timers. */
+	    tmr_run( &tv );
+	    continue;
 	    }
 
-		/* Find the connections that need servicing. */
-		while ( ( c = (connecttab*) fdwatch_get_next_client_data() ) != (connecttab*) -1 )
+	/* Is it a new connection? */
+	if ( hs != (httpd_server*) 0 && hs->listen6_fd != -1 &&
+	     fdwatch_check_fd( hs->listen6_fd ) )
+	    {
+	    if ( handle_newconnect( &tv, hs->listen6_fd ) )
+		/* Go around the loop and do another fdwatch, rather than
+		** dropping through and processing existing connections.
+		** New connections always get priority.
+		*/
+		continue;
+	    }
+	if ( hs != (httpd_server*) 0 && hs->listen4_fd != -1 &&
+	     fdwatch_check_fd( hs->listen4_fd ) )
+	    {
+	    if ( handle_newconnect( &tv, hs->listen4_fd ) )
+		/* Go around the loop and do another fdwatch, rather than
+		** dropping through and processing existing connections.
+		** New connections always get priority.
+		*/
+		continue;
+	    }
+
+	/* Find the connections that need servicing. */
+	while ( ( c = (connecttab*) fdwatch_get_next_client_data() ) != (connecttab*) -1 )
+	    {
+	    if ( c == (connecttab*) 0 )
+		continue;
+	    hc = c->hc;
+	    if ( ! fdwatch_check_fd( hc->conn_fd ) )
+		/* Something went wrong. */
+		clear_connection( c, &tv );
+	    else
+		switch ( c->conn_state )
+		    {
+		    case CNST_READING: handle_read( c, &tv ); break;
+		    case CNST_SENDING: handle_send( c, &tv ); break;
+		    case CNST_LINGERING: handle_linger( c, &tv ); break;
+		    }
+	    }
+	tmr_run( &tv );
+
+	if ( got_usr1 && ! terminate )
+	    {
+	    terminate = 1;
+	    if ( hs != (httpd_server*) 0 )
 		{
-	    	if ( c == (connecttab*) 0 )
-			{
-				continue;
-			}
-	    	hc = c->hc;
-	    	if ( ! fdwatch_check_fd( hc->conn_fd ) )
-			/* Something went wrong. */
-			{
-				clear_connection( c, &tv );
-			}
-	    	else
-			{
-				switch ( c->conn_state )
-		    	{
-					/*获取请求*/
-		    		case CNST_READING: handle_read( c, &tv ); break;
-		    		/*发送响应*/
-					case CNST_SENDING: handle_send( c, &tv ); break;
-					/**/
-		    		case CNST_LINGERING: handle_linger( c, &tv ); break;
-		    	}
-			}
-		
-			tmr_run( &tv );
-
-			if ( got_usr1 && ! terminate )
-	    	{
-	    		terminate = 1;
-	    		if ( hs != (httpd_server*) 0 )
-				{
-					if ( hs->listen4_fd != -1 )
-		    		{
-						fdwatch_del_fd( hs->listen4_fd );
-					}
-					if ( hs->listen6_fd != -1 )
-		    		{
-						fdwatch_del_fd( hs->listen6_fd );
-					}
-					httpd_unlisten( hs );
-				}
-	    	}
+		if ( hs->listen4_fd != -1 )
+		    fdwatch_del_fd( hs->listen4_fd );
+		if ( hs->listen6_fd != -1 )
+		    fdwatch_del_fd( hs->listen6_fd );
+		httpd_unlisten( hs );
 		}
+	    }
 	}
+
     /* The main loop terminated. */
     shut_down();
     syslog( LOG_NOTICE, "exiting" );
     closelog();
     exit( 0 );
-}
+    }
 
-/*命令行处理函数*/
-static void parse_args( int argc, char** argv )
-{
+
+static void
+parse_args( int argc, char** argv )
+    {
     int argn;
 
     debug = 0;
@@ -965,145 +883,121 @@ static void parse_args( int argc, char** argv )
     argn = 1;
     while ( argn < argc && argv[argn][0] == '-' )
 	{
-		/*-V命令用于获取服务器的软件信息*/
-		if ( strcmp( argv[argn], "-V" ) == 0 )
+	if ( strcmp( argv[argn], "-V" ) == 0 )
 	    {
-	    	(void) printf( "%s\n", SERVER_SOFTWARE );
-	    	exit( 0 );
+	    (void) printf( "%s\n", SERVER_SOFTWARE );
+	    exit( 0 );
 	    }
-		/*-C 命令后面接文件的路径将会根据路径读取配置文件的信息*/
-		else if ( strcmp( argv[argn], "-C" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-C" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-			/*读取配置文件*/
-	    	read_config( argv[argn] );
+	    ++argn;
+	    read_config( argv[argn] );
 	    }
-		/*-p命令用于设置服务器监听的端口号*/
-		else if ( strcmp( argv[argn], "-p" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-p" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	port = (unsigned short) atoi( argv[argn] );
+	    ++argn;
+	    port = (unsigned short) atoi( argv[argn] );
 	    }
-		/*-d命令用于定义*/
-		else if ( strcmp( argv[argn], "-d" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-d" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	dir = argv[argn];
+	    ++argn;
+	    dir = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-r" ) == 0 )
+	else if ( strcmp( argv[argn], "-r" ) == 0 )
 	    {
-	    	do_chroot = 1;
-	    	no_symlink_check = 1;
+	    do_chroot = 1;
+	    no_symlink_check = 1;
 	    }
-		else if ( strcmp( argv[argn], "-nor" ) == 0 )
+	else if ( strcmp( argv[argn], "-nor" ) == 0 )
 	    {
-	    	do_chroot = 0;
-	    	no_symlink_check = 0;
+	    do_chroot = 0;
+	    no_symlink_check = 0;
 	    }
-		else if ( strcmp( argv[argn], "-dd" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-dd" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	data_dir = argv[argn];
+	    ++argn;
+	    data_dir = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-s" ) == 0 )
+	else if ( strcmp( argv[argn], "-s" ) == 0 )
+	    no_symlink_check = 0;
+	else if ( strcmp( argv[argn], "-nos" ) == 0 )
+	    no_symlink_check = 1;
+	else if ( strcmp( argv[argn], "-u" ) == 0 && argn + 1 < argc )
 	    {
-			no_symlink_check = 0;
-		}
-		else if ( strcmp( argv[argn], "-nos" ) == 0 )
-	    {
-			no_symlink_check = 1;
-		}
-		else if ( strcmp( argv[argn], "-u" ) == 0 && argn + 1 < argc )
-	    {
-	    	++argn;
-	    	user = argv[argn];
+	    ++argn;
+	    user = argv[argn];
 	    }
-		/*-c命令用于设置CGI程序的路径*/
-		else if ( strcmp( argv[argn], "-c" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-c" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	cgi_pattern = argv[argn];
+	    ++argn;
+	    cgi_pattern = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-t" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-t" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	throttlefile = argv[argn];
+	    ++argn;
+	    throttlefile = argv[argn];
 	    }
-		/*-h命令用于获取设备的主机名*/
-		else if ( strcmp( argv[argn], "-h" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-h" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	hostname = argv[argn];
+	    ++argn;
+	    hostname = argv[argn];
 	    }
-		/*-l命令用于设置log文件的路径*/
-		else if ( strcmp( argv[argn], "-l" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-l" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	logfile = argv[argn];
+	    ++argn;
+	    logfile = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-v" ) == 0 )
+	else if ( strcmp( argv[argn], "-v" ) == 0 )
+	    do_vhost = 1;
+	else if ( strcmp( argv[argn], "-nov" ) == 0 )
+	    do_vhost = 0;
+	else if ( strcmp( argv[argn], "-g" ) == 0 )
+	    do_global_passwd = 1;
+	else if ( strcmp( argv[argn], "-nog" ) == 0 )
+	    do_global_passwd = 0;
+	else if ( strcmp( argv[argn], "-i" ) == 0 && argn + 1 < argc )
 	    {
-			do_vhost = 1;
-		}
-		else if ( strcmp( argv[argn], "-nov" ) == 0 )
-	    {
-			do_vhost = 0;
-		}
-		else if ( strcmp( argv[argn], "-g" ) == 0 )
-	    {
-			do_global_passwd = 1;
-		}
-		else if ( strcmp( argv[argn], "-nog" ) == 0 )
-	    {
-			do_global_passwd = 0;
-		}
-		else if ( strcmp( argv[argn], "-i" ) == 0 && argn + 1 < argc )
-	    {
-	    	++argn;
-	    	pidfile = argv[argn];
+	    ++argn;
+	    pidfile = argv[argn];
 	    }
-		/*-T命令用于设置字符集*/
-		else if ( strcmp( argv[argn], "-T" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-T" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	charset = argv[argn];
+	    ++argn;
+	    charset = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-P" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-P" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	p3p = argv[argn];
+	    ++argn;
+	    p3p = argv[argn];
 	    }
-		else if ( strcmp( argv[argn], "-M" ) == 0 && argn + 1 < argc )
+	else if ( strcmp( argv[argn], "-M" ) == 0 && argn + 1 < argc )
 	    {
-	    	++argn;
-	    	max_age = atoi( argv[argn] );
+	    ++argn;
+	    max_age = atoi( argv[argn] );
 	    }
-		else if ( strcmp( argv[argn], "-D" ) == 0 )
-	   	{
-		    debug = 1;
-	   	}
-		else
-	    {
-			usage();
-		}
-		++argn;
+	else if ( strcmp( argv[argn], "-D" ) == 0 )
+	    debug = 1;
+	else
+	    usage();
+	++argn;
 	}
     if ( argn != argc )
-	{
-		usage();
-	}
-}
+	usage();
+    }
 
-/*在标准错误中输出argv0的值*/
-static void usage( void )
-{
-    (void) fprintf( stderr,"usage:  %s [-C configfile] [-p port] [-d dir] [-r|-nor] [-dd data_dir] [-s|-nos] [-v|-nov] [-g|-nog] [-u user] [-c cgipat] [-t throttles] [-h host] [-l logfile] [-i pidfile] [-T charset] [-P P3P] [-M maxage] [-V] [-D]\n",
+
+static void
+usage( void )
+    {
+    (void) fprintf( stderr,
+"usage:  %s [-C configfile] [-p port] [-d dir] [-r|-nor] [-dd data_dir] [-s|-nos] [-v|-nov] [-g|-nog] [-u user] [-c cgipat] [-t throttles] [-h host] [-l logfile] [-i pidfile] [-T charset] [-P P3P] [-M maxage] [-V] [-D]\n",
 	argv0 );
     exit( 1 );
-}
+    }
 
-/*读取配置文件*/
-static void read_config( char* filename )
+
+static void
+read_config( char* filename )
     {
     FILE* fp;
     char line[10000];
@@ -1131,7 +1025,7 @@ static void read_config( char* filename )
 
 	/* Split line into words. */
 	while ( *cp != '\0' )
-	{
+	    {
 	    /* Find next whitespace. */
 	    cp2 = cp + strcspn( cp, " \t\n\r" );
 	    /* Insert EOS and advance next-word pointer. */
@@ -1223,8 +1117,8 @@ static void read_config( char* filename )
 		}
 	    else if ( strcasecmp( name, "host" ) == 0 )
 		{
-			value_required( name, value );
-			hostname = e_strdup( value );
+		value_required( name, value );
+		hostname = e_strdup( value );
 		}
 	    else if ( strcasecmp( name, "logfile" ) == 0 )
 		{
@@ -1233,23 +1127,23 @@ static void read_config( char* filename )
 		}
 	    else if ( strcasecmp( name, "vhost" ) == 0 )
 		{
-			no_value_required( name, value );
-			do_vhost = 1;
+		no_value_required( name, value );
+		do_vhost = 1;
 		}
 	    else if ( strcasecmp( name, "novhost" ) == 0 )
 		{
-			no_value_required( name, value );
-			do_vhost = 0;
+		no_value_required( name, value );
+		do_vhost = 0;
 		}
 	    else if ( strcasecmp( name, "globalpasswd" ) == 0 )
 		{
-			no_value_required( name, value );
-			do_global_passwd = 1;
+		no_value_required( name, value );
+		do_global_passwd = 1;
 		}
 	    else if ( strcasecmp( name, "noglobalpasswd" ) == 0 )
 		{
-			no_value_required( name, value );
-			do_global_passwd = 0;
+		no_value_required( name, value );
+		do_global_passwd = 0;
 		}
 	    else if ( strcasecmp( name, "pidfile" ) == 0 )
 		{
@@ -1288,7 +1182,8 @@ static void read_config( char* filename )
     }
 
 
-static void value_required( char* name, char* value )
+static void
+value_required( char* name, char* value )
     {
     if ( value == (char*) 0 )
 	{
@@ -1299,7 +1194,8 @@ static void value_required( char* name, char* value )
     }
 
 
-static void no_value_required( char* name, char* value )
+static void
+no_value_required( char* name, char* value )
     {
     if ( value != (char*) 0 )
 	{
@@ -1311,8 +1207,9 @@ static void no_value_required( char* name, char* value )
     }
 
 
-static char* e_strdup( char* oldstr )
-{
+static char*
+e_strdup( char* oldstr )
+    {
     char* newstr;
 
     newstr = strdup( oldstr );
@@ -1323,11 +1220,12 @@ static char* e_strdup( char* oldstr )
 	exit( 1 );
 	}
     return newstr;
-}
+    }
 
 
-static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
-{
+static void
+lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
+    {
 #ifdef USE_IPV6
 
     struct addrinfo hints;
@@ -1459,8 +1357,9 @@ static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, 
     }
 
 
-static void read_throttlefile( char* tf )
-{
+static void
+read_throttlefile( char* tf )
+    {
     FILE* fp;
     char buf[5000];
     char* cp;
@@ -1472,28 +1371,26 @@ static void read_throttlefile( char* tf )
     fp = fopen( tf, "r" );
     if ( fp == (FILE*) 0 )
 	{
-		syslog( LOG_CRIT, "%.80s - %m", tf );
-		perror( tf );
-		exit( 1 );
+	syslog( LOG_CRIT, "%.80s - %m", tf );
+	perror( tf );
+	exit( 1 );
 	}
-	/*获取时间*/
+
     (void) gettimeofday( &tv, (struct timezone*) 0 );
 
     while ( fgets( buf, sizeof(buf), fp ) != (char*) 0 )
 	{
-		/* Nuke comments. */
-		cp = strchr( buf, '#' );
-		if ( cp != (char*) 0 )
-	    {
-			*cp = '\0';
-		}
+	/* Nuke comments. */
+	cp = strchr( buf, '#' );
+	if ( cp != (char*) 0 )
+	    *cp = '\0';
 
-		/* Nuke trailing whitespace. */
-		len = strlen( buf );
-		while ( len > 0 &&( buf[len-1] == ' ' || buf[len-1] == '\t' ||buf[len-1] == '\n' || buf[len-1] == '\r' ) )
-	    {
-			buf[--len] = '\0';
-		}
+	/* Nuke trailing whitespace. */
+	len = strlen( buf );
+	while ( len > 0 &&
+		( buf[len-1] == ' ' || buf[len-1] == '\t' ||
+		  buf[len-1] == '\n' || buf[len-1] == '\r' ) )
+	    buf[--len] = '\0';
 
 	/* Ignore empty lines. */
 	if ( len == 0 )
@@ -1554,58 +1451,50 @@ static void read_throttlefile( char* tf )
 	++numthrottles;
 	}
     (void) fclose( fp );
-}
+    }
 
-/*释放所有创建的参数*/
-static void shut_down( void )
-{
+
+static void
+shut_down( void )
+    {
     int cnum;
     struct timeval tv;
 
     (void) gettimeofday( &tv, (struct timezone*) 0 );
-	/*告诉所有的文件写状态*/
     logstats( &tv );
-	/*关闭所有连接*/
     for ( cnum = 0; cnum < max_connects; ++cnum )
 	{
-		if ( connects[cnum].conn_state != CNST_FREE )
+	if ( connects[cnum].conn_state != CNST_FREE )
+	    httpd_close_conn( connects[cnum].hc, &tv );
+	if ( connects[cnum].hc != (httpd_conn*) 0 )
 	    {
-			httpd_close_conn( connects[cnum].hc, &tv );
-		}
-		if ( connects[cnum].hc != (httpd_conn*) 0 )
-	    {
-	    	httpd_destroy_conn( connects[cnum].hc );
-	    	free( (void*) connects[cnum].hc );
-	    	--httpd_conn_count;
-	    	connects[cnum].hc = (httpd_conn*) 0;
+	    httpd_destroy_conn( connects[cnum].hc );
+	    free( (void*) connects[cnum].hc );
+	    --httpd_conn_count;
+	    connects[cnum].hc = (httpd_conn*) 0;
 	    }
 	}
     if ( hs != (httpd_server*) 0 )
 	{
-		httpd_server* ths = hs;
-		hs = (httpd_server*) 0;
-		if ( ths->listen4_fd != -1 )
-	    {
-			fdwatch_del_fd( ths->listen4_fd );
-		}
-		if ( ths->listen6_fd != -1 )
-		{
-			fdwatch_del_fd( ths->listen6_fd );
-		}
-		httpd_terminate( ths );
+	httpd_server* ths = hs;
+	hs = (httpd_server*) 0;
+	if ( ths->listen4_fd != -1 )
+	    fdwatch_del_fd( ths->listen4_fd );
+	if ( ths->listen6_fd != -1 )
+	    fdwatch_del_fd( ths->listen6_fd );
+	httpd_terminate( ths );
 	}
     mmc_term();
     tmr_term();
     free( (void*) connects );
     if ( throttles != (throttletab*) 0 )
-	{
-		free( (void*) throttles );
-	}
-}
+	free( (void*) throttles );
+    }
 
-/*对于新的连接的处理*/
-static int handle_newconnect( struct timeval* tvP, int listen_fd )
-{
+
+static int
+handle_newconnect( struct timeval* tvP, int listen_fd )
+    {
     connecttab* c;
     ClientData client_data;
 
@@ -1615,87 +1504,78 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
     */
     for (;;)
 	{
-		/* Is there room in the connection table? */
-		/*超出最大连接数的处理*/
-		if ( num_connects >= max_connects )
+	/* Is there room in the connection table? */
+	if ( num_connects >= max_connects )
 	    {
 	    /* Out of connection slots.  Run the timers, then the
 	    ** existing connections, and maybe we'll free up a slot
 	    ** by the time we get back here.
 	    */
-	    	syslog( LOG_WARNING, "too many connections!" );
-	    	tmr_run( tvP );
-	    	return 0;
+	    syslog( LOG_WARNING, "too many connections!" );
+	    tmr_run( tvP );
+	    return 0;
 	    }
-		/* Get the first free connection entry off the free list. */
-		/*判断连接表是否工作正常*/
-		if ( first_free_connect == -1 || connects[first_free_connect].conn_state != CNST_FREE )
+	/* Get the first free connection entry off the free list. */
+	if ( first_free_connect == -1 || connects[first_free_connect].conn_state != CNST_FREE )
 	    {
-	    	syslog( LOG_CRIT, "the connects free list is messed up" );
-	    	exit( 1 );
+	    syslog( LOG_CRIT, "the connects free list is messed up" );
+	    exit( 1 );
 	    }
-		/*获取当前连接的地址*/
-		c = &connects[first_free_connect];
-		/* Make the httpd_conn if necessary. */
-		/*初始化连接*/
-		if ( c->hc == (httpd_conn*) 0 )
+	c = &connects[first_free_connect];
+	/* Make the httpd_conn if necessary. */
+	if ( c->hc == (httpd_conn*) 0 )
 	    {
-	    	c->hc = NEW( httpd_conn, 1 );
-	    	if ( c->hc == (httpd_conn*) 0 )
-			{
-				syslog( LOG_CRIT, "out of memory allocating an httpd_conn" );
-				exit( 1 );
-			}
-	    	c->hc->initialized = 0;
-	    	++httpd_conn_count;
+	    c->hc = NEW( httpd_conn, 1 );
+	    if ( c->hc == (httpd_conn*) 0 )
+		{
+		syslog( LOG_CRIT, "out of memory allocating an httpd_conn" );
+		exit( 1 );
+		}
+	    c->hc->initialized = 0;
+	    ++httpd_conn_count;
 	    }
 
-		/* Get the connection. */
-		/*接收这个连接*/
-		switch ( httpd_get_conn( hs, listen_fd, c->hc ) )
+	/* Get the connection. */
+	switch ( httpd_get_conn( hs, listen_fd, c->hc ) )
 	    {
 	    /* Some error happened.  Run the timers, then the
 	    ** existing connections.  Maybe the error will clear.
 	    */
-	    	case GC_FAIL:
-	    		tmr_run( tvP );
-	    	return 0;
+	    case GC_FAIL:
+	    tmr_run( tvP );
+	    return 0;
 
 	    /* No more connections to accept for now. */
-	    	case GC_NO_MORE:
-	    	return 1;
+	    case GC_NO_MORE:
+	    return 1;
 	    }
-		/*设置连接状态为读取数据状态*/
-		c->conn_state = CNST_READING;
-		/* Pop it off the free list. */
-		/*指向下一个连接*/
-		first_free_connect = c->next_free_connect;
-		c->next_free_connect = -1;
-		++num_connects;
-		client_data.p = c;
-		c->active_at = tvP->tv_sec;
-		c->wakeup_timer = (Timer*) 0;
-		c->linger_timer = (Timer*) 0;
-		c->next_byte_index = 0;
-		c->numtnums = 0;
+	c->conn_state = CNST_READING;
+	/* Pop it off the free list. */
+	first_free_connect = c->next_free_connect;
+	c->next_free_connect = -1;
+	++num_connects;
+	client_data.p = c;
+	c->active_at = tvP->tv_sec;
+	c->wakeup_timer = (Timer*) 0;
+	c->linger_timer = (Timer*) 0;
+	c->next_byte_index = 0;
+	c->numtnums = 0;
 
-		/* Set the connection file descriptor to no-delay mode. */
-		/**设置文件标志为非延时模式*/
-		httpd_set_ndelay( c->hc->conn_fd );
+	/* Set the connection file descriptor to no-delay mode. */
+	httpd_set_ndelay( c->hc->conn_fd );
 
-		fdwatch_add_fd( c->hc->conn_fd, c, FDW_READ );
+	fdwatch_add_fd( c->hc->conn_fd, c, FDW_READ );
 
-		++stats_connections;
-		if ( num_connects > stats_simultaneous )
-	    {
-			stats_simultaneous = num_connects;
-		}
+	++stats_connections;
+	if ( num_connects > stats_simultaneous )
+	    stats_simultaneous = num_connects;
 	}
-}
+    }
 
-/*读请求里面包含对于CGI的处理*/
-static void handle_read( connecttab* c, struct timeval* tvP )
-{
+
+static void
+handle_read( connecttab* c, struct timeval* tvP )
+    {
     int sz;
     ClientData client_data;
     httpd_conn* hc = c->hc;
@@ -1703,23 +1583,25 @@ static void handle_read( connecttab* c, struct timeval* tvP )
     /* Is there room in our buffer to read more bytes? */
     if ( hc->read_idx >= hc->read_size )
 	{
-		if ( hc->read_size > 5000 )
+	if ( hc->read_size > 5000 )
 	    {
-	    	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
-	    	finish_connection( c, tvP );
-	    	return;
+	    httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
+	    finish_connection( c, tvP );
+	    return;
 	    }
-		httpd_realloc_str(&hc->read_buf, &hc->read_size, hc->read_size + 1000 );
+	httpd_realloc_str(
+	    &hc->read_buf, &hc->read_size, hc->read_size + 1000 );
 	}
 
     /* Read some more bytes. */
-	/*从文件描述符中读取文件*/
-    sz = read(hc->conn_fd, &(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx );
+    sz = read(
+	hc->conn_fd, &(hc->read_buf[hc->read_idx]),
+	hc->read_size - hc->read_idx );
     if ( sz == 0 )
 	{
-		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
-		finish_connection( c, tvP );
-		return;
+	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
+	finish_connection( c, tvP );
+	return;
 	}
     if ( sz < 0 )
 	{
@@ -1728,85 +1610,78 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	** should never give an EWOULDBLOCK; however, this apparently can
 	** happen if a packet gets garbled.
 	*/
-		if ( errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK )
-		{
-			return;
-		}
-		httpd_send_err(hc, 400, httpd_err400title, "", httpd_err400form, "" );
-		finish_connection( c, tvP );
-		return;
+	if ( errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK )
+	    return;
+	httpd_send_err(
+	    hc, 400, httpd_err400title, "", httpd_err400form, "" );
+	finish_connection( c, tvP );
+	return;
 	}
     hc->read_idx += sz;
     c->active_at = tvP->tv_sec;
 
     /* Do we have a complete request yet? */
-	/*判断文件是否读取完成*/
     switch ( httpd_got_request( hc ) )
 	{
-		case GR_NO_REQUEST:
-			return;
-		case GR_BAD_REQUEST:
-			httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
-			finish_connection( c, tvP );
-			return;
+	case GR_NO_REQUEST:
+	return;
+	case GR_BAD_REQUEST:
+	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
+	finish_connection( c, tvP );
+	return;
 	}
 
     /* Yes.  Try parsing and resolving it. */
     if ( httpd_parse_request( hc ) < 0 )
 	{
-		finish_connection( c, tvP );
-		return;
+	finish_connection( c, tvP );
+	return;
 	}
 
     /* Check the throttle table */
     if ( ! check_throttles( c ) )
 	{
-		httpd_send_err(hc, 503, httpd_err503title, "", httpd_err503form, hc->encodedurl );
-		finish_connection( c, tvP );
-		return;
+	httpd_send_err(
+	    hc, 503, httpd_err503title, "", httpd_err503form, hc->encodedurl );
+	finish_connection( c, tvP );
+	return;
 	}
 
     /* Start the connection going. */
     if ( httpd_start_request( hc, tvP ) < 0 )
 	{
-		/* Something went wrong.  Close down the connection. */
-		finish_connection( c, tvP );
-		return;
+	/* Something went wrong.  Close down the connection. */
+	finish_connection( c, tvP );
+	return;
 	}
 
     /* Fill in end_byte_index. */
     if ( hc->got_range )
 	{
-		c->next_byte_index = hc->first_byte_index;
-		c->end_byte_index = hc->last_byte_index + 1;
+	c->next_byte_index = hc->first_byte_index;
+	c->end_byte_index = hc->last_byte_index + 1;
 	}
     else if ( hc->bytes_to_send < 0 )
-	{
-		c->end_byte_index = 0;
-	}
+	c->end_byte_index = 0;
     else
-	{
-		c->end_byte_index = hc->bytes_to_send;
-	}
+	c->end_byte_index = hc->bytes_to_send;
 
     /* Check if it's already handled. */
     if ( hc->file_address == (char*) 0 )
 	{
 	/* No file address means someone else is handling it. */
-		int tind;
-		for ( tind = 0; tind < c->numtnums; ++tind )
-	    {
-			throttles[c->tnums[tind]].bytes_since_avg += hc->bytes_sent;
-		}
-		c->next_byte_index = hc->bytes_sent;
-		finish_connection( c, tvP );
-		return;
+	int tind;
+	for ( tind = 0; tind < c->numtnums; ++tind )
+	    throttles[c->tnums[tind]].bytes_since_avg += hc->bytes_sent;
+	c->next_byte_index = hc->bytes_sent;
+	finish_connection( c, tvP );
+	return;
 	}
     if ( c->next_byte_index >= c->end_byte_index )
 	{
 	/* There's nothing to send. */
-		finish_connection( c, tvP );
-		return;
+	finish_connection( c, tvP );
+	return;
 	}
 
     /* Cool, we have a valid connection and a file to send to it. */
@@ -1817,11 +1692,12 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 
     fdwatch_del_fd( hc->conn_fd );
     fdwatch_add_fd( hc->conn_fd, c, FDW_WRITE );
-}
+    }
 
-/*发送数据处理*/
-static void handle_send( connecttab* c, struct timeval* tvP )
-{
+
+static void
+handle_send( connecttab* c, struct timeval* tvP )
+    {
     size_t max_bytes;
     int sz, coast;
     ClientData client_data;
@@ -1830,40 +1706,37 @@ static void handle_send( connecttab* c, struct timeval* tvP )
     int tind;
 
     if ( c->max_limit == THROTTLE_NOLIMIT )
-	{
-		max_bytes = 1000000000L;
-	}
+	max_bytes = 1000000000L;
     else
-	{
-		max_bytes = c->max_limit / 4;	/* send at most 1/4 seconds worth */
-	}
+	max_bytes = c->max_limit / 4;	/* send at most 1/4 seconds worth */
 
     /* Do we need to write the headers first? */
     if ( hc->responselen == 0 )
 	{
 	/* No, just write the file. */
-		sz = write(hc->conn_fd, &(hc->file_address[c->next_byte_index]),MIN( c->end_byte_index - c->next_byte_index, max_bytes ) );
+	sz = write(
+	    hc->conn_fd, &(hc->file_address[c->next_byte_index]),
+	    MIN( c->end_byte_index - c->next_byte_index, max_bytes ) );
 	}
     else
 	{
 	/* Yes.  We'll combine headers and file into a single writev(),
 	** hoping that this generates a single packet.
 	*/
-		struct iovec iv[2];
+	struct iovec iv[2];
 
-		iv[0].iov_base = hc->response;
-		iv[0].iov_len = hc->responselen;
-		iv[1].iov_base = &(hc->file_address[c->next_byte_index]);
-		iv[1].iov_len = MIN( c->end_byte_index - c->next_byte_index, max_bytes );
-		sz = writev( hc->conn_fd, iv, 2 );
+	iv[0].iov_base = hc->response;
+	iv[0].iov_len = hc->responselen;
+	iv[1].iov_base = &(hc->file_address[c->next_byte_index]);
+	iv[1].iov_len = MIN( c->end_byte_index - c->next_byte_index, max_bytes );
+	sz = writev( hc->conn_fd, iv, 2 );
 	}
 
     if ( sz < 0 && errno == EINTR )
-	{
-		return;
-	}
+	return;
 
-    if ( sz == 0 ||( sz < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN ) ) )
+    if ( sz == 0 ||
+	 ( sz < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN ) ) )
 	{
 	/* This shouldn't happen, but some kernels, e.g.
 	** SunOS 4.1.x, are broken and select() says that
@@ -1977,11 +1850,12 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	    }
 	}
     /* (No check on min_limit here, that only controls connection startups.) */
-}
+    }
 
 
-static void handle_linger( connecttab* c, struct timeval* tvP )
-{
+static void
+handle_linger( connecttab* c, struct timeval* tvP )
+    {
     char buf[4096];
     int r;
 
@@ -1990,69 +1864,54 @@ static void handle_linger( connecttab* c, struct timeval* tvP )
     */
     r = read( c->hc->conn_fd, buf, sizeof(buf) );
     if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
-	{
-		return;
-	}
+	return;
     if ( r <= 0 )
-	{
-		really_clear_connection( c, tvP );
-	}
-}
+	really_clear_connection( c, tvP );
+    }
 
 
-static int check_throttles( connecttab* c )
-{
+static int
+check_throttles( connecttab* c )
+    {
     int tnum;
     long l;
 
     c->numtnums = 0;
     c->max_limit = c->min_limit = THROTTLE_NOLIMIT;
-    for ( tnum = 0; tnum < numthrottles && c->numtnums < MAXTHROTTLENUMS;++tnum )
-	{
-		if ( match( throttles[tnum].pattern, c->hc->expnfilename ) )
+    for ( tnum = 0; tnum < numthrottles && c->numtnums < MAXTHROTTLENUMS;
+	  ++tnum )
+	if ( match( throttles[tnum].pattern, c->hc->expnfilename ) )
 	    {
-	    	/* If we're way over the limit, don't even start. */
-	    	if ( throttles[tnum].rate > throttles[tnum].max_limit * 2 )
-			{
-				return 0;
-			}
-	    	/* Also don't start if we're under the minimum. */
-	    	if ( throttles[tnum].rate < throttles[tnum].min_limit )
-			{
-				return 0;
-			}
-	    	if ( throttles[tnum].num_sending < 0 )
-			{
-				syslog( LOG_ERR, "throttle sending count was negative - shouldn't happen!" );
-				throttles[tnum].num_sending = 0;
-			}
-	    	c->tnums[c->numtnums++] = tnum;
-	    	++throttles[tnum].num_sending;
-	    	l = throttles[tnum].max_limit / throttles[tnum].num_sending;
-	    	if ( c->max_limit == THROTTLE_NOLIMIT )
-			{
-				c->max_limit = l;
-			}
-	    	else
-			{
-				c->max_limit = MIN( c->max_limit, l );
-			}
-	    	l = throttles[tnum].min_limit;
-	    	if ( c->min_limit == THROTTLE_NOLIMIT )
-			{
-				c->min_limit = l;
-			}
-	    	else
-			{
-				c->min_limit = MAX( c->min_limit, l );
-			}
+	    /* If we're way over the limit, don't even start. */
+	    if ( throttles[tnum].rate > throttles[tnum].max_limit * 2 )
+		return 0;
+	    /* Also don't start if we're under the minimum. */
+	    if ( throttles[tnum].rate < throttles[tnum].min_limit )
+		return 0;
+	    if ( throttles[tnum].num_sending < 0 )
+		{
+		syslog( LOG_ERR, "throttle sending count was negative - shouldn't happen!" );
+		throttles[tnum].num_sending = 0;
+		}
+	    c->tnums[c->numtnums++] = tnum;
+	    ++throttles[tnum].num_sending;
+	    l = throttles[tnum].max_limit / throttles[tnum].num_sending;
+	    if ( c->max_limit == THROTTLE_NOLIMIT )
+		c->max_limit = l;
+	    else
+		c->max_limit = MIN( c->max_limit, l );
+	    l = throttles[tnum].min_limit;
+	    if ( c->min_limit == THROTTLE_NOLIMIT )
+		c->min_limit = l;
+	    else
+		c->min_limit = MAX( c->min_limit, l );
 	    }
-	}
     return 1;
-}
+    }
 
 
-static void clear_throttles( connecttab* c, struct timeval* tvP )
+static void
+clear_throttles( connecttab* c, struct timeval* tvP )
     {
     int tind;
 
@@ -2061,7 +1920,8 @@ static void clear_throttles( connecttab* c, struct timeval* tvP )
     }
 
 
-static void update_throttles( ClientData client_data, struct timeval* nowP )
+static void
+update_throttles( ClientData client_data, struct timeval* nowP )
     {
     int tnum, tind;
     int cnum;
@@ -2112,24 +1972,26 @@ static void update_throttles( ClientData client_data, struct timeval* nowP )
     }
 
 
-static void finish_connection( connecttab* c, struct timeval* tvP )
-{
+static void
+finish_connection( connecttab* c, struct timeval* tvP )
+    {
     /* If we haven't actually sent the buffered response yet, do so now. */
     httpd_write_response( c->hc );
 
     /* And clear. */
     clear_connection( c, tvP );
-}
+    }
 
 
-static void clear_connection( connecttab* c, struct timeval* tvP )
-{
+static void
+clear_connection( connecttab* c, struct timeval* tvP )
+    {
     ClientData client_data;
 
     if ( c->wakeup_timer != (Timer*) 0 )
 	{
-		tmr_cancel( c->wakeup_timer );
-		c->wakeup_timer = 0;
+	tmr_cancel( c->wakeup_timer );
+	c->wakeup_timer = 0;
 	}
 
     /* This is our version of Apache's lingering_close() routine, which is
@@ -2173,143 +2035,147 @@ static void clear_connection( connecttab* c, struct timeval* tvP )
     }
 
 
-static void really_clear_connection( connecttab* c, struct timeval* tvP )
-{
+static void
+really_clear_connection( connecttab* c, struct timeval* tvP )
+    {
     stats_bytes += c->hc->bytes_sent;
     if ( c->conn_state != CNST_PAUSING )
-	{
-		fdwatch_del_fd( c->hc->conn_fd );
-	}
+	fdwatch_del_fd( c->hc->conn_fd );
     httpd_close_conn( c->hc, tvP );
     clear_throttles( c, tvP );
     if ( c->linger_timer != (Timer*) 0 )
 	{
-		tmr_cancel( c->linger_timer );
-		c->linger_timer = 0;
+	tmr_cancel( c->linger_timer );
+	c->linger_timer = 0;
 	}
     c->conn_state = CNST_FREE;
     c->next_free_connect = first_free_connect;
     first_free_connect = c - connects;	/* division by sizeof is implied */
     --num_connects;
-}
+    }
 
 
-static void idle( ClientData client_data, struct timeval* nowP )
-{
+static void
+idle( ClientData client_data, struct timeval* nowP )
+    {
     int cnum;
     connecttab* c;
 
     for ( cnum = 0; cnum < max_connects; ++cnum )
 	{
-		c = &connects[cnum];
-		switch ( c->conn_state )
+	c = &connects[cnum];
+	switch ( c->conn_state )
 	    {
-	    	case CNST_READING:
-	    		if ( nowP->tv_sec - c->active_at >= IDLE_READ_TIMELIMIT )
-				{
-					syslog( LOG_INFO,"%.80s connection timed out reading",httpd_ntoa( &c->hc->client_addr ) );
-					httpd_send_err(c->hc, 408, httpd_err408title, "", httpd_err408form, "" );
-					finish_connection( c, nowP );
-				}
-	    	break;
-	    	case CNST_SENDING:
-	    	case CNST_PAUSING:
-	    		if ( nowP->tv_sec - c->active_at >= IDLE_SEND_TIMELIMIT )
-				{
-					syslog( LOG_INFO,"%.80s connection timed out sending",httpd_ntoa( &c->hc->client_addr ) );
-					clear_connection( c, nowP );
-				}
-	    	break;
+	    case CNST_READING:
+	    if ( nowP->tv_sec - c->active_at >= IDLE_READ_TIMELIMIT )
+		{
+		syslog( LOG_INFO,
+		    "%.80s connection timed out reading",
+		    httpd_ntoa( &c->hc->client_addr ) );
+		httpd_send_err(
+		    c->hc, 408, httpd_err408title, "", httpd_err408form, "" );
+		finish_connection( c, nowP );
+		}
+	    break;
+	    case CNST_SENDING:
+	    case CNST_PAUSING:
+	    if ( nowP->tv_sec - c->active_at >= IDLE_SEND_TIMELIMIT )
+		{
+		syslog( LOG_INFO,
+		    "%.80s connection timed out sending",
+		    httpd_ntoa( &c->hc->client_addr ) );
+		clear_connection( c, nowP );
+		}
+	    break;
 	    }
 	}
-}
+    }
 
-/*唤醒连接*/
-static void wakeup_connection( ClientData client_data, struct timeval* nowP )
-{
+
+static void
+wakeup_connection( ClientData client_data, struct timeval* nowP )
+    {
     connecttab* c;
 
     c = (connecttab*) client_data.p;
     c->wakeup_timer = (Timer*) 0;
     if ( c->conn_state == CNST_PAUSING )
 	{
-		c->conn_state = CNST_SENDING;
-		fdwatch_add_fd( c->hc->conn_fd, c, FDW_WRITE );
+	c->conn_state = CNST_SENDING;
+	fdwatch_add_fd( c->hc->conn_fd, c, FDW_WRITE );
 	}
-}
+    }
 
-static void linger_clear_connection( ClientData client_data, struct timeval* nowP )
-{
+static void
+linger_clear_connection( ClientData client_data, struct timeval* nowP )
+    {
     connecttab* c;
 
     c = (connecttab*) client_data.p;
     c->linger_timer = (Timer*) 0;
     really_clear_connection( c, nowP );
-}
+    }
 
 
-static void occasional( ClientData client_data, struct timeval* nowP )
-{
+static void
+occasional( ClientData client_data, struct timeval* nowP )
+    {
     mmc_cleanup( nowP );
     tmr_cleanup();
     watchdog_flag = 1;		/* let the watchdog know that we are alive */
-}
+    }
 
 
 #ifdef STATS_TIME
-static void show_stats( ClientData client_data, struct timeval* nowP )
-{
+static void
+show_stats( ClientData client_data, struct timeval* nowP )
+    {
     logstats( nowP );
-}
+    }
 #endif /* STATS_TIME */
 
 
 /* Generate debugging statistics syslog messages for all packages. */
-static void logstats( struct timeval* nowP )
-{
+static void
+logstats( struct timeval* nowP )
+    {
     struct timeval tv;
     time_t now;
     long up_secs, stats_secs;
 
     if ( nowP == (struct timeval*) 0 )
 	{
-		(void) gettimeofday( &tv, (struct timezone*) 0 );
-		nowP = &tv;
+	(void) gettimeofday( &tv, (struct timezone*) 0 );
+	nowP = &tv;
 	}
-	/*当前时间*/
     now = nowP->tv_sec;
-	/*当前时间和上次时间的差值*/
     up_secs = now - start_time;
     stats_secs = now - stats_time;
     if ( stats_secs == 0 )
-	{
-		stats_secs = 1;	/* fudge */
-	}
-	/*更新上次时间*/
+	stats_secs = 1;	/* fudge */
     stats_time = now;
-    syslog( LOG_NOTICE,"up %ld seconds, stats for %ld seconds:", up_secs, stats_secs );
+    syslog( LOG_NOTICE,
+	"up %ld seconds, stats for %ld seconds:", up_secs, stats_secs );
 
     thttpd_logstats( stats_secs );
     httpd_logstats( stats_secs );
     mmc_logstats( stats_secs );
     fdwatch_logstats( stats_secs );
     tmr_logstats( stats_secs );
-}
+    }
 
 
 /* Generate debugging statistics syslog message. */
-/*记录thttpdlog文件更新数据*/
-static void thttpd_logstats( long secs )
-{
+static void
+thttpd_logstats( long secs )
+    {
     if ( secs > 0 )
-	{
-		syslog( LOG_NOTICE,
-	    	"  thttpd - %ld connections (%g/sec), %d max simultaneous, %lld bytes (%g/sec), %d httpd_conns allocated",
-	    	stats_connections, (float) stats_connections / secs,
-	    	stats_simultaneous, (long long) stats_bytes,
-	    	(float) stats_bytes / secs, httpd_conn_count );
-	}
+	syslog( LOG_NOTICE,
+	    "  thttpd - %ld connections (%g/sec), %d max simultaneous, %lld bytes (%g/sec), %d httpd_conns allocated",
+	    stats_connections, (float) stats_connections / secs,
+	    stats_simultaneous, (long long) stats_bytes,
+	    (float) stats_bytes / secs, httpd_conn_count );
     stats_connections = 0;
     stats_bytes = 0;
     stats_simultaneous = 0;
-}
+    }
