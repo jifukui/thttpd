@@ -253,7 +253,7 @@ httpd_server* httpd_initialize(
 	/*暂时不清楚，没有用*/
     check_options();
 	/*申请空间*/
-    hs = NEW( httpd_server, 1 );/
+    hs = NEW( httpd_server, 1 );
 	/****内存分配失败**/
     if ( hs == (httpd_server*) 0 )
 	{
