@@ -1745,7 +1745,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	printf("The ip addr is :");
 	for(ji=0;ji<14;ji++)
 	{
-		printf("%d.",sa.sa.sa_data[ji]);
+		printf("%u:",sa.sa.sa_data[ji]);
 	}
 	printf("\n");
 	printf("The accept fd is %d\n",listen_fd);
