@@ -1,6 +1,6 @@
 /* libhttpd.c - HTTP protocol library
 **
-** Copyright � 1995,1998,1999,2000,2001,2015 by
+** Copyright � 1995,1998,1999,2000,2001,2015 by
 ** Jef Poskanzer <jef@mail.acme.com>. All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -1670,41 +1670,42 @@ expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped
     return checked;
     }
 
-
-int
-httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
-    {
+/**http的连接处理*/
+int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
+{
     httpd_sockaddr sa;
     socklen_t sz;
-
+#ifdef JI_DEBUG
+	printf("The hc->initialized status is %d\n",hc->initialized);
+#endif
     if ( ! hc->initialized )
 	{
-	hc->read_size = 0;
-	httpd_realloc_str( &hc->read_buf, &hc->read_size, 500 );
-	hc->maxdecodedurl =
-	    hc->maxorigfilename = hc->maxexpnfilename = hc->maxencodings =
-	    hc->maxpathinfo = hc->maxquery = hc->maxaccept =
-	    hc->maxaccepte = hc->maxreqhost = hc->maxhostdir =
-	    hc->maxremoteuser = hc->maxresponse = 0;
+		hc->read_size = 0;
+		httpd_realloc_str( &hc->read_buf, &hc->read_size, 500 );
+		hc->maxdecodedurl =
+	    	hc->maxorigfilename = hc->maxexpnfilename = hc->maxencodings =
+	    	hc->maxpathinfo = hc->maxquery = hc->maxaccept =
+	    	hc->maxaccepte = hc->maxreqhost = hc->maxhostdir =
+	    	hc->maxremoteuser = hc->maxresponse = 0;
 #ifdef TILDE_MAP_2
 	hc->maxaltdir = 0;
 #endif /* TILDE_MAP_2 */
-	httpd_realloc_str( &hc->decodedurl, &hc->maxdecodedurl, 1 );
-	httpd_realloc_str( &hc->origfilename, &hc->maxorigfilename, 1 );
-	httpd_realloc_str( &hc->expnfilename, &hc->maxexpnfilename, 0 );
-	httpd_realloc_str( &hc->encodings, &hc->maxencodings, 0 );
-	httpd_realloc_str( &hc->pathinfo, &hc->maxpathinfo, 0 );
-	httpd_realloc_str( &hc->query, &hc->maxquery, 0 );
-	httpd_realloc_str( &hc->accept, &hc->maxaccept, 0 );
-	httpd_realloc_str( &hc->accepte, &hc->maxaccepte, 0 );
-	httpd_realloc_str( &hc->reqhost, &hc->maxreqhost, 0 );
-	httpd_realloc_str( &hc->hostdir, &hc->maxhostdir, 0 );
-	httpd_realloc_str( &hc->remoteuser, &hc->maxremoteuser, 0 );
-	httpd_realloc_str( &hc->response, &hc->maxresponse, 0 );
+		httpd_realloc_str( &hc->decodedurl, &hc->maxdecodedurl, 1 );
+		httpd_realloc_str( &hc->origfilename, &hc->maxorigfilename, 1 );
+		httpd_realloc_str( &hc->expnfilename, &hc->maxexpnfilename, 0 );
+		httpd_realloc_str( &hc->encodings, &hc->maxencodings, 0 );
+		httpd_realloc_str( &hc->pathinfo, &hc->maxpathinfo, 0 );
+		httpd_realloc_str( &hc->query, &hc->maxquery, 0 );
+		httpd_realloc_str( &hc->accept, &hc->maxaccept, 0 );
+		httpd_realloc_str( &hc->accepte, &hc->maxaccepte, 0 );
+		httpd_realloc_str( &hc->reqhost, &hc->maxreqhost, 0 );
+		httpd_realloc_str( &hc->hostdir, &hc->maxhostdir, 0 );
+		httpd_realloc_str( &hc->remoteuser, &hc->maxremoteuser, 0 );
+		httpd_realloc_str( &hc->response, &hc->maxresponse, 0 );
 #ifdef TILDE_MAP_2
-	httpd_realloc_str( &hc->altdir, &hc->maxaltdir, 0 );
+		httpd_realloc_str( &hc->altdir, &hc->maxaltdir, 0 );
 #endif /* TILDE_MAP_2 */
-	hc->initialized = 1;
+		hc->initialized = 1;
 	}
 
     /* Accept the new connection. */
@@ -1712,21 +1713,25 @@ httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
     hc->conn_fd = accept( listen_fd, &sa.sa, &sz );
     if ( hc->conn_fd < 0 )
 	{
-	if ( errno == EWOULDBLOCK )
-	    return GC_NO_MORE;
-	/* ECONNABORTED means the connection was closed by the client while
-	** it was waiting in the listen queue.  It's not worth logging.
-	*/
-	if ( errno != ECONNABORTED )
-	    syslog( LOG_ERR, "accept - %m" );
-	return GC_FAIL;
+		if ( errno == EWOULDBLOCK )
+	    {
+			return GC_NO_MORE;
+		}
+		/* ECONNABORTED means the connection was closed by the client while
+		** it was waiting in the listen queue.  It's not worth logging.
+		*/
+		if ( errno != ECONNABORTED )
+	    {
+			syslog( LOG_ERR, "accept - %m" );
+		}
+		return GC_FAIL;
 	}
     if ( ! sockaddr_check( &sa ) )
 	{
-	syslog( LOG_ERR, "unknown sockaddr family" );
-	close( hc->conn_fd );
-	hc->conn_fd = -1;
-	return GC_FAIL;
+		syslog( LOG_ERR, "unknown sockaddr family" );
+		close( hc->conn_fd );
+		hc->conn_fd = -1;
+		return GC_FAIL;
 	}
     (void) fcntl( hc->conn_fd, F_SETFD, 1 );
     hc->hs = hs;
@@ -1779,7 +1784,7 @@ httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
     hc->should_linger = 0;
     hc->file_address = (char*) 0;
     return GC_OK;
-    }
+}
 
 
 /* Checks hc->read_buf to see whether a complete request has been read so far;
