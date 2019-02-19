@@ -1742,10 +1742,10 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 #ifdef JI_DEBUG
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
-	unsigned short *port=&sa.sa.sa_data[0];
-	unsigned int *addr=&sa.sa.sa_data[2];
-	printf("port is %u\n",*port);
-	printf("The ip addr is %u\n",*addr);
+	//unsigned short *port=&sa.sa.sa_data[0];
+	//unsigned int *addr=&sa.sa.sa_data[2];
+	printf("port is %u\n",sa.sa_in.sin_port);
+	printf("The ip addr is %u,%u,%u,%u\n",sa.sa_in.sin_addr.S_un_b.s_b1,sa.sa_in.sin_addr.S_un_b.s_b2,sa.sa_in.sin_addr.S_un_b.s_b3,sa.sa_in.sin_addr.S_un_b.s_b4);
 	printf("The accept fd is %d\n",listen_fd);
 	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif
