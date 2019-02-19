@@ -1744,8 +1744,8 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	char ji=0;
 	unsigned short *port=&sa.sa.sa_data[0];
 	unsigned int *addr=&sa.sa.sa_data[2];
-	printf("port is %d\n",port);
-	printf("The ip addr is %d\n",addr);
+	printf("port is %u\n",port);
+	printf("The ip addr is %u\n",addr);
 	printf("The accept fd is %d\n",listen_fd);
 	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif
