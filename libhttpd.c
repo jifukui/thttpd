@@ -730,33 +730,32 @@ send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extra
 static int str_alloc_count = 0;
 static size_t str_alloc_size = 0;
 
-void
-httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
-    {
+void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
+{
     if ( *maxsizeP == 0 )
 	{
-	*maxsizeP = MAX( 200, size + 100 );
-	*strP = NEW( char, *maxsizeP + 1 );
-	++str_alloc_count;
-	str_alloc_size += *maxsizeP;
+		*maxsizeP = MAX( 200, size + 100 );
+		*strP = NEW( char, *maxsizeP + 1 );
+		++str_alloc_count;
+		str_alloc_size += *maxsizeP;
 	}
     else if ( size > *maxsizeP )
 	{
-	str_alloc_size -= *maxsizeP;
-	*maxsizeP = MAX( *maxsizeP * 2, size * 5 / 4 );
-	*strP = RENEW( *strP, char, *maxsizeP + 1 );
-	str_alloc_size += *maxsizeP;
+		str_alloc_size -= *maxsizeP;
+		*maxsizeP = MAX( *maxsizeP * 2, size * 5 / 4 );
+		*strP = RENEW( *strP, char, *maxsizeP + 1 );
+		str_alloc_size += *maxsizeP;
 	}
     else
-	return;
+	{
+		return;
+	}
     if ( *strP == (char*) 0 )
 	{
-	syslog(
-	    LOG_ERR, "out of memory reallocating a string to %ld bytes",
-	    (long) *maxsizeP );
-	exit( 1 );
+		syslog(LOG_ERR, "out of memory reallocating a string to %ld bytes",(long) *maxsizeP );
+		return;exit( 1 );
 	}
-    }
+}
 
 
 static void
@@ -1742,10 +1741,12 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 #ifdef JI_DEBUG
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
-	//unsigned short *port=&sa.sa.sa_data[0];
-	//unsigned int *addr=&sa.sa.sa_data[2];
-	printf("port is %u\n",sa.sa_in.sin_port);
-	printf("The ip addr is %u,%u,%u,%u\n",sa.sa_in.sin_addr.S_addr.s_b1,sa.sa_in.sin_addr.S_addr.s_b2,sa.sa_in.sin_addr.S_addr.s_b3,sa.sa_in.sin_addr.S_addr.s_b4);
+	printf("The data is:");
+	for(ji=0;ji<6;ji++)
+	{
+		printf("%u:",(unsigned char)sa.sa.sa_data[ji]);
+	}
+	printf("\n");
 	printf("The accept fd is %d\n",listen_fd);
 	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif
