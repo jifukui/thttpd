@@ -59,6 +59,7 @@
 /* The httpd structs. */
 
 /* A multi-family sockaddr. */
+/**http地址联合体*/
 typedef union {
     struct sockaddr sa;
     struct sockaddr_in sa_in;
@@ -66,20 +67,23 @@ typedef union {
     struct sockaddr_in6 sa_in6;
     struct sockaddr_storage sa_stor;
 #endif /* USE_IPV6 */
-    } httpd_sockaddr;
+} httpd_sockaddr;
 
 /* A server. */
+/**服务器结构对象*/
 typedef struct {
     char* binding_hostname;
     char* server_hostname;
     unsigned short port;
     char* cgi_pattern;
-    int cgi_limit, cgi_count;
+    int cgi_limit;
+    int cgi_count;
     char* charset;
     char* p3p;
     int max_age;
     char* cwd;
-    int listen4_fd, listen6_fd;
+    int listen4_fd;
+    int listen6_fd;
     int no_log;
     FILE* logfp;
     int no_symlink_check;
@@ -88,15 +92,18 @@ typedef struct {
     char* url_pattern;
     char* local_pattern;
     int no_empty_referrers;
-    } httpd_server;
+} httpd_server;
 
 /* A connection. */
+/**http连接结构对象*/
 typedef struct {
-    int initialized;
-    httpd_server* hs;
-    httpd_sockaddr client_addr;
+    int initialized;                //http服务器是否初始化状态标志位
+    httpd_server* hs;               //http服务器结构对象
+    httpd_sockaddr client_addr;     //http客户端地址信息
     char* read_buf;
-    size_t read_size, read_idx, checked_idx;
+    size_t read_size;
+    size_t read_idx;
+    size_t checked_idx;
     int checked_state;
     int method;
     int status;
@@ -123,9 +130,18 @@ typedef struct {
     char* authorization;
     char* remoteuser;
     char* response;
-    size_t maxdecodedurl, maxorigfilename, maxexpnfilename, maxencodings,
-	maxpathinfo, maxquery, maxaccept, maxaccepte, maxreqhost, maxhostdir,
-	maxremoteuser, maxresponse;
+    size_t maxdecodedurl;
+    size_t maxorigfilename;
+    size_t maxexpnfilename;
+    size_t maxencodings;
+	size_t maxpathinfo;
+    size_t maxquery;
+    size_t maxaccept;
+    size_t maxaccepte;
+    size_t maxreqhost;
+    size_t maxhostdir;
+	size_t maxremoteuser;
+    size_t maxresponse;
 #ifdef TILDE_MAP_2
     char* altdir;
     size_t maxaltdir;
@@ -139,13 +155,14 @@ typedef struct {
     int one_one;	/* HTTP/1.1 or better */
     int got_range;
     int tildemapped;	/* this connection got tilde-mapped */
-    off_t first_byte_index, last_byte_index;
+    off_t first_byte_index；
+    off_t last_byte_index;
     int keep_alive;
     int should_linger;
     struct stat sb;
-    int conn_fd;
+    int conn_fd;        //连接的文件描述符
     char* file_address;
-    } httpd_conn;
+} httpd_conn;
 
 /* Methods. */
 #define METHOD_UNKNOWN 0

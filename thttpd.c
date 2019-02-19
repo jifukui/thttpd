@@ -117,7 +117,7 @@ typedef struct {
     off_t bytes;
     off_t end_byte_index;
     off_t next_byte_index;
-    } connecttab;
+} connecttab;
 static connecttab* connects;
 static int num_connects, max_connects, first_free_connect;
 static int httpd_conn_count;
@@ -129,7 +129,7 @@ static int httpd_conn_count;
 #define CNST_PAUSING 3
 #define CNST_LINGERING 4
 
-
+/**初始化全局静态对象http服务器*/
 static httpd_server* hs = (httpd_server*) 0;
 int terminate = 0;
 time_t start_time, stats_time;
@@ -327,28 +327,29 @@ handle_alrm( int sig )
     }
 
 
-static void
-re_open_logfile( void )
-    {
+static void re_open_logfile( void )
+{
     FILE* logfp;
 
     if ( no_log || hs == (httpd_server*) 0 )
-	return;
+	{
+		return;
+	}
 
     /* Re-open the log file. */
     if ( logfile != (char*) 0 && strcmp( logfile, "-" ) != 0 )
 	{
-	syslog( LOG_NOTICE, "re-opening logfile" );
-	logfp = fopen( logfile, "a" );
-	if ( logfp == (FILE*) 0 )
+		syslog( LOG_NOTICE, "re-opening logfile" );
+		logfp = fopen( logfile, "a" );
+		if ( logfp == (FILE*) 0 )
 	    {
-	    syslog( LOG_CRIT, "re-opening %.80s - %m", logfile );
-	    return;
+	    	syslog( LOG_CRIT, "re-opening %.80s - %m", logfile );
+	    	return;
 	    }
-	(void) fcntl( fileno( logfp ), F_SETFD, 1 );
-	httpd_set_logfp( hs, logfp );
+		(void) fcntl( fileno( logfp ), F_SETFD, 1 );
+		httpd_set_logfp( hs, logfp );
 	}
-    }
+}
 
 /**主要的thttpd服务器主程序*/
 int main( int argc, char** argv )
@@ -370,6 +371,9 @@ int main( int argc, char** argv )
     struct timeval tv;
 
     argv0 = argv[0];
+#ifdef JI_DEBUG
+	printf("The argv0 is %s\n",argv0);
+#endif
 	/**strrchr函数是用于查找字符串中第一次出现/字符的位置*/
     cp = strrchr( argv0, '/' );
     if ( cp != (char*) 0 )
@@ -657,6 +661,7 @@ int main( int argc, char** argv )
 	port, cgi_pattern, cgi_limit, charset, p3p, max_age, cwd, no_log, logfp,
 	no_symlink_check, do_vhost, do_global_passwd, url_pattern,
 	local_pattern, no_empty_referrers );
+	/**http服务器对象未初始化的错误处理*/
     if ( hs == (httpd_server*) 0 )
 	{
 		exit( 1 );
@@ -762,7 +767,9 @@ int main( int argc, char** argv )
 			fdwatch_add_fd( hs->listen6_fd, (void*) 0, FDW_READ );
 		}
 	}
-
+#ifdef JI__DEBUG
+	printf("start to debug\n");
+#endif
     /* Main loop. */
     (void) gettimeofday( &tv, (struct timezone*) 0 );
     while ( ( ! terminate ) || num_connects > 0 )
@@ -775,6 +782,7 @@ int main( int argc, char** argv )
 	    }
 
 		/* Do the fd watch. */
+		/**获取是否有程序的超时*/
 		num_ready = fdwatch( tmr_mstimeout( &tv ) );
 		if ( num_ready < 0 )
 	    {
@@ -794,7 +802,7 @@ int main( int argc, char** argv )
 	    	continue;
 	    }
 
-		/* Is it a new connection? */
+		/**对于IP地址为IPv6进行处理*/
 		if ( hs != (httpd_server*) 0 && hs->listen6_fd != -1 &&fdwatch_check_fd( hs->listen6_fd ) )
 	    {
 	    	if ( handle_newconnect( &tv, hs->listen6_fd ) )
@@ -802,7 +810,9 @@ int main( int argc, char** argv )
 			** dropping through and processing existing connections.
 			** New connections always get priority.
 			*/
-			continue;
+			{
+				continue;
+			}
 	    }
 		/**对IP地址为IPV4的处理*/
 		if ( hs != (httpd_server*) 0 && hs->listen4_fd != -1 &&fdwatch_check_fd( hs->listen4_fd ) )
@@ -1516,7 +1526,7 @@ shut_down( void )
 	free( (void*) throttles );
     }
 
-
+/**对于有新的连接进行处理，这个程序使用定时器进行程序的切换*/
 static int handle_newconnect( struct timeval* tvP, int listen_fd )
 {
     connecttab* c;
@@ -1542,6 +1552,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    	return 0;
 	    }
 		/* Get the first free connection entry off the free list. */
+		/**对于当前无可用的文件描述符的处理*/
 		if ( first_free_connect == -1 || connects[first_free_connect].conn_state != CNST_FREE )
 	    {
 	    	syslog( LOG_CRIT, "the connects free list is messed up" );
@@ -1549,19 +1560,23 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    }
 		c = &connects[first_free_connect];
 		/* Make the httpd_conn if necessary. */
+		/**对http连接没有初始化进行初始化操作*/
 		if ( c->hc == (httpd_conn*) 0 )
 	    {
 	    	c->hc = NEW( httpd_conn, 1 );
+			/**对初始化http连接失败进行处理*/
 	    	if ( c->hc == (httpd_conn*) 0 )
 			{
 				syslog( LOG_CRIT, "out of memory allocating an httpd_conn" );
 				exit( 1 );
 			}
+			/**设置http初始化标志为未初始化*/
 	    	c->hc->initialized = 0;
 	    	++httpd_conn_count;
 	    }
 
 		/* Get the connection. */
+		/**对连接进行处理*/
 		switch ( httpd_get_conn( hs, listen_fd, c->hc ) )
 	    {
 	    	/* Some error happened.  Run the timers, then the
@@ -1575,8 +1590,10 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    	case GC_NO_MORE:
 	    		return 1;
 	    }
+		/**设置连接状态*/
 		c->conn_state = CNST_READING;
 		/* Pop it off the free list. */
+		/**设置下一个可以使用的文件描述符*/
 		first_free_connect = c->next_free_connect;
 		c->next_free_connect = -1;
 		++num_connects;
@@ -1588,8 +1605,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		c->numtnums = 0;
 
 		/* Set the connection file descriptor to no-delay mode. */
+		/**设置此文件描述符为非阻塞模式*/
 		httpd_set_ndelay( c->hc->conn_fd );
-
+		/**向文件队列中添加需要此文件描述符*/
 		fdwatch_add_fd( c->hc->conn_fd, c, FDW_READ );
 
 		++stats_connections;
@@ -1600,9 +1618,8 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	}
 }
 
-
-static void
-handle_read( connecttab* c, struct timeval* tvP )
+/***/
+static void handle_read( connecttab* c, struct timeval* tvP )
     {
     int sz;
     ClientData client_data;
@@ -1723,8 +1740,7 @@ handle_read( connecttab* c, struct timeval* tvP )
     }
 
 
-static void
-handle_send( connecttab* c, struct timeval* tvP )
+static void handle_send( connecttab* c, struct timeval* tvP )
     {
     size_t max_bytes;
     int sz, coast;
@@ -2120,29 +2136,27 @@ idle( ClientData client_data, struct timeval* nowP )
     }
 
 
-static void
-wakeup_connection( ClientData client_data, struct timeval* nowP )
-    {
+static void wakeup_connection( ClientData client_data, struct timeval* nowP )
+{
     connecttab* c;
 
     c = (connecttab*) client_data.p;
     c->wakeup_timer = (Timer*) 0;
     if ( c->conn_state == CNST_PAUSING )
 	{
-	c->conn_state = CNST_SENDING;
-	fdwatch_add_fd( c->hc->conn_fd, c, FDW_WRITE );
+		c->conn_state = CNST_SENDING;
+		fdwatch_add_fd( c->hc->conn_fd, c, FDW_WRITE );
 	}
-    }
+}
 
-static void
-linger_clear_connection( ClientData client_data, struct timeval* nowP )
-    {
+static void linger_clear_connection( ClientData client_data, struct timeval* nowP )
+{
     connecttab* c;
 
     c = (connecttab*) client_data.p;
     c->linger_timer = (Timer*) 0;
     really_clear_connection( c, nowP );
-    }
+}
 
 
 static void

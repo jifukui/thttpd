@@ -1,6 +1,6 @@
 /* fdwatch.c - fd watcher routines, either select() or poll()
 **
-** Copyright � 1999,2000 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1999,2000 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -58,7 +58,9 @@
 #endif /* HAVE_SYS_EVENT_H */
 
 #include "fdwatch.h"
-
+#ifdef JI_DEBUG
+#include "version.h"
+#endif
 #ifdef HAVE_SELECT
 #ifndef FD_SET
 #define NFDBITS         32
@@ -203,23 +205,27 @@ fdwatch_get_nfiles( void )
 
 
 /* Add a descriptor to the watch list.  rw is either FDW_READ or FDW_WRITE.  */
-void
-fdwatch_add_fd( int fd, void* client_data, int rw )
-    {
+/**在文件队列中添加文件描述符
+ * fd为文件描述符
+ * client_data为传入的数据
+ * rw为对鞋状态位
+*/
+void fdwatch_add_fd( int fd, void* client_data, int rw )
+{
+    /**对于错误的文件描述符的处理即文件描述符超出范围*/
     if ( fd < 0 || fd >= nfiles || fd_rw[fd] != -1 )
 	{
-	syslog( LOG_ERR, "bad fd (%d) passed to fdwatch_add_fd!", fd );
-	return;
+	    syslog( LOG_ERR, "bad fd (%d) passed to fdwatch_add_fd!", fd );
+	    return;
 	}
     ADD_FD( fd, rw );
     fd_rw[fd] = rw;
     fd_data[fd] = client_data;
-    }
+}
 
 
 /* Remove a descriptor from the watch list. */
-void
-fdwatch_del_fd( int fd )
+void fdwatch_del_fd( int fd )
     {
     if ( fd < 0 || fd >= nfiles || fd_rw[fd] == -1 )
 	{
@@ -235,41 +241,43 @@ fdwatch_del_fd( int fd )
 ** or 0 if the timeout expired, or -1 on errors.  A timeout of INFTIM means
 ** wait indefinitely.
 */
-int
-fdwatch( long timeout_msecs )
-    {
+int fdwatch( long timeout_msecs )
+{
     ++nwatches;
     nreturned = WATCH( timeout_msecs );
     next_ridx = 0;
     return nreturned;
-    }
+}
 
 
 /* Check if a descriptor was ready. */
-int
-fdwatch_check_fd( int fd )
-    {
+/**检测连接的文件描述符是否是有效的文件描述符*/
+int fdwatch_check_fd( int fd )
+{
     if ( fd < 0 || fd >= nfiles || fd_rw[fd] == -1 )
 	{
-	syslog( LOG_ERR, "bad fd (%d) passed to fdwatch_check_fd!", fd );
-	return 0;
+	    syslog( LOG_ERR, "bad fd (%d) passed to fdwatch_check_fd!", fd );
+	    return 0;
 	}
     return CHECK_FD( fd );
-    }
+}
 
 
-void*
-fdwatch_get_next_client_data( void )
-    {
+void* fdwatch_get_next_client_data( void )
+{
     int fd;
 
     if ( next_ridx >= nreturned )
-	return (void*) -1;
+	{
+        return (void*) -1;
+    }
     fd = GET_FD( next_ridx++ );
     if ( fd < 0 || fd >= nfiles )
-	return (void*) 0;
-    return fd_data[fd];
+	{
+        return (void*) 0;
     }
+    return fd_data[fd];
+}
 
 
 /* Generate debugging statistics syslog message. */
