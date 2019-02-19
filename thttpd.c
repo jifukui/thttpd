@@ -1225,7 +1225,7 @@ static char* e_strdup( char* oldstr )
     return newstr;
 }
 
-
+/***/
 static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
 {
 #ifdef USE_IPV6
@@ -1245,13 +1245,9 @@ static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, 
     (void) snprintf( portstr, sizeof(portstr), "%d", (int) port );
     if ( (gaierr = getaddrinfo( hostname, portstr, &hints, &ai )) != 0 )
 	{
-	syslog(
-	    LOG_CRIT, "getaddrinfo %.80s - %.80s",
-	    hostname, gai_strerror( gaierr ) );
-	(void) fprintf(
-	    stderr, "%s: getaddrinfo %s - %s\n",
-	    argv0, hostname, gai_strerror( gaierr ) );
-	exit( 1 );
+		syslog(LOG_CRIT, "getaddrinfo %.80s - %.80s",hostname, gai_strerror( gaierr ) );
+		(void) fprintf(stderr, "%s: getaddrinfo %s - %s\n",argv0, hostname, gai_strerror( gaierr ) );
+		exit( 1 );
 	}
 
     /* Find the first IPv6 and IPv4 entries. */
@@ -1259,51 +1255,53 @@ static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, 
     aiv4 = (struct addrinfo*) 0;
     for ( ai2 = ai; ai2 != (struct addrinfo*) 0; ai2 = ai2->ai_next )
 	{
-	switch ( ai2->ai_family )
+		switch ( ai2->ai_family )
 	    {
-	    case AF_INET6:
-	    if ( aiv6 == (struct addrinfo*) 0 )
-		aiv6 = ai2;
-	    break;
-	    case AF_INET:
-	    if ( aiv4 == (struct addrinfo*) 0 )
-		aiv4 = ai2;
-	    break;
+	    	case AF_INET6:
+	    	if ( aiv6 == (struct addrinfo*) 0 )
+			{
+				aiv6 = ai2;
+			}
+	    	break;
+	    	case AF_INET:
+	    	if ( aiv4 == (struct addrinfo*) 0 )
+			{
+				aiv4 = ai2;
+			}
+	    	break;
 	    }
 	}
 
     if ( aiv6 == (struct addrinfo*) 0 )
-	*gotv6P = 0;
+	{
+		*gotv6P = 0;
+	}
     else
 	{
-	if ( sa6_len < aiv6->ai_addrlen )
+		if ( sa6_len < aiv6->ai_addrlen )
 	    {
-	    syslog(
-		LOG_CRIT, "%.80s - sockaddr too small (%lu < %lu)",
-		hostname, (unsigned long) sa6_len,
-		(unsigned long) aiv6->ai_addrlen );
-	    exit( 1 );
+	    	syslog(LOG_CRIT, "%.80s - sockaddr too small (%lu < %lu)",hostname, (unsigned long) sa6_len,(unsigned long) aiv6->ai_addrlen );
+	    	exit( 1 );
 	    }
-	(void) memset( sa6P, 0, sa6_len );
-	(void) memmove( sa6P, aiv6->ai_addr, aiv6->ai_addrlen );
-	*gotv6P = 1;
+		(void) memset( sa6P, 0, sa6_len );
+		(void) memmove( sa6P, aiv6->ai_addr, aiv6->ai_addrlen );
+		*gotv6P = 1;
 	}
 
     if ( aiv4 == (struct addrinfo*) 0 )
-	*gotv4P = 0;
+	{
+		*gotv4P = 0;
+	}
     else
 	{
-	if ( sa4_len < aiv4->ai_addrlen )
+		if ( sa4_len < aiv4->ai_addrlen )
 	    {
-	    syslog(
-		LOG_CRIT, "%.80s - sockaddr too small (%lu < %lu)",
-		hostname, (unsigned long) sa4_len,
-		(unsigned long) aiv4->ai_addrlen );
-	    exit( 1 );
+	    	syslog(LOG_CRIT, "%.80s - sockaddr too small (%lu < %lu)",hostname, (unsigned long) sa4_len,(unsigned long) aiv4->ai_addrlen );
+	    	exit( 1 );
 	    }
-	(void) memset( sa4P, 0, sa4_len );
-	(void) memmove( sa4P, aiv4->ai_addr, aiv4->ai_addrlen );
-	*gotv4P = 1;
+		(void) memset( sa4P, 0, sa4_len );
+		(void) memmove( sa4P, aiv4->ai_addr, aiv4->ai_addrlen );
+		*gotv4P = 1;
 	}
 
     freeaddrinfo( ai );
@@ -1317,39 +1315,33 @@ static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, 
     (void) memset( sa4P, 0, sa4_len );
     sa4P->sa.sa_family = AF_INET;
     if ( hostname == (char*) 0 )
-	sa4P->sa_in.sin_addr.s_addr = htonl( INADDR_ANY );
+	{
+		sa4P->sa_in.sin_addr.s_addr = htonl( INADDR_ANY );
+	}
     else
 	{
-	sa4P->sa_in.sin_addr.s_addr = inet_addr( hostname );
-	if ( (int) sa4P->sa_in.sin_addr.s_addr == -1 )
+		sa4P->sa_in.sin_addr.s_addr = inet_addr( hostname );
+		if ( (int) sa4P->sa_in.sin_addr.s_addr == -1 )
 	    {
-	    he = gethostbyname( hostname );
-	    if ( he == (struct hostent*) 0 )
-		{
+	    	he = gethostbyname( hostname );
+	    	if ( he == (struct hostent*) 0 )
+			{
 #ifdef HAVE_HSTRERROR
-		syslog(
-		    LOG_CRIT, "gethostbyname %.80s - %.80s",
-		    hostname, hstrerror( h_errno ) );
-		(void) fprintf(
-		    stderr, "%s: gethostbyname %s - %s\n",
-		    argv0, hostname, hstrerror( h_errno ) );
+			syslog(LOG_CRIT, "gethostbyname %.80s - %.80s",hostname, hstrerror( h_errno ) );
+			(void) fprintf(stderr, "%s: gethostbyname %s - %s\n",argv0, hostname, hstrerror( h_errno ) );
 #else /* HAVE_HSTRERROR */
-		syslog( LOG_CRIT, "gethostbyname %.80s failed", hostname );
-		(void) fprintf(
-		    stderr, "%s: gethostbyname %s failed\n", argv0, hostname );
+			syslog( LOG_CRIT, "gethostbyname %.80s failed", hostname );
+			(void) fprintf(stderr, "%s: gethostbyname %s failed\n", argv0, hostname );
 #endif /* HAVE_HSTRERROR */
-		exit( 1 );
+			exit( 1 );
 		}
-	    if ( he->h_addrtype != AF_INET )
-		{
-		syslog( LOG_CRIT, "%.80s - non-IP network address", hostname );
-		(void) fprintf(
-		    stderr, "%s: %s - non-IP network address\n",
-		    argv0, hostname );
-		exit( 1 );
-		}
-	    (void) memmove(
-		&sa4P->sa_in.sin_addr.s_addr, he->h_addr, he->h_length );
+	    	if ( he->h_addrtype != AF_INET )
+			{
+				syslog( LOG_CRIT, "%.80s - non-IP network address", hostname );
+				(void) fprintf(stderr, "%s: %s - non-IP network address\n",argv0, hostname );
+				exit( 1 );
+			}
+	    	(void) memmove(&sa4P->sa_in.sin_addr.s_addr, he->h_addr, he->h_length );
 	    }
 	}
     sa4P->sa_in.sin_port = htons( port );

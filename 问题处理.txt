@@ -1,3 +1,9 @@
 （1）./configure 生成编译的条件
 （2）使用netstat -ntulp |grep 80命令查看80端口的使用状态
 （3）配置参数的说明 http://blog.chinaunix.net/uid-7331343-id-2059369.html
+（4）安装使用教程 https://www.jianshu.com/p/9b681714b4ac
+（5）在利国的设备上进行编译的时候会出现cannot find -lcrypt的错误进行如下的修改即可，在PC上无此问题
+    #SUBDIRS =	cgi-src extras
+    SUBDIRS =
+（6）lsof -i:80也可以获取端口的相关信息
+（7）当前无法访问的原因是由于支持了IPV6但是没有支持ipv4。
