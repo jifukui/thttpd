@@ -155,7 +155,7 @@ typedef struct {
     int one_one;	/* HTTP/1.1 or better */
     int got_range;
     int tildemapped;	/* this connection got tilde-mapped */
-    off_t first_byte_index；
+    off_t first_byte_index;
     off_t last_byte_index;
     int keep_alive;
     int should_linger;
