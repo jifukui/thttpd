@@ -1618,6 +1618,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    {
 			stats_simultaneous = num_connects;
 		}
+#ifdef JI_DEBUG
+		printf("Test new connect end\n");
+#endif
 	}
 }
 
