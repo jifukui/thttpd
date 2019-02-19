@@ -1,6 +1,6 @@
 /* libhttpd.h - defines for libhttpd
 **
-** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,7 @@
 #include <netdb.h>
 
 #if defined(AF_INET6) && defined(IN6_IS_ADDR_V4MAPPED)
-#define USE_IPV6
+//#define USE_IPV6 /**禁止使用IPV6*/
 #endif
 
 

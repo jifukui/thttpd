@@ -1,6 +1,6 @@
 /* thttpd.c - tiny/turbo/throttling HTTP server
 **
-** Copyright � 1995,1998,1999,2000,2001,2015 by
+** Copyright � 1995,1998,1999,2000,2001,2015 by
 ** Jef Poskanzer <jef@mail.acme.com>. All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -350,10 +350,9 @@ re_open_logfile( void )
 	}
     }
 
-
-int
-main( int argc, char** argv )
-    {
+/**主要的thttpd服务器主程序*/
+int main( int argc, char** argv )
+{
     char* cp;
     struct passwd* pwd;
     uid_t uid = 32767;
@@ -366,16 +365,21 @@ main( int argc, char** argv )
     httpd_conn* hc;
     httpd_sockaddr sa4;
     httpd_sockaddr sa6;
-    int gotv4, gotv6;
+    int gotv4;
+	int gotv6;
     struct timeval tv;
 
     argv0 = argv[0];
-
+	/**strrchr函数是用于查找字符串中第一次出现/字符的位置*/
     cp = strrchr( argv0, '/' );
     if ( cp != (char*) 0 )
-	++cp;
+	{
+		++cp;
+	}
     else
-	cp = argv0;
+	{
+		cp = argv0;
+	}
     openlog( cp, LOG_NDELAY|LOG_PID, LOG_FACILITY );
 
     /* Handle command-line arguments. */
@@ -388,9 +392,9 @@ main( int argc, char** argv )
     lookup_hostname( &sa4, sizeof(sa4), &gotv4, &sa6, sizeof(sa6), &gotv6 );
     if ( ! ( gotv4 || gotv6 ) )
 	{
-	syslog( LOG_ERR, "can't find any valid address" );
-	(void) fprintf( stderr, "%s: can't find any valid address\n", argv0 );
-	exit( 1 );
+		syslog( LOG_ERR, "can't find any valid address" );
+		(void) fprintf( stderr, "%s: can't find any valid address\n", argv0 );
+		exit( 1 );
 	}
 
     /* Throttle file. */
@@ -1207,25 +1211,23 @@ no_value_required( char* name, char* value )
     }
 
 
-static char*
-e_strdup( char* oldstr )
-    {
+static char* e_strdup( char* oldstr )
+{
     char* newstr;
 
     newstr = strdup( oldstr );
     if ( newstr == (char*) 0 )
 	{
-	syslog( LOG_CRIT, "out of memory copying a string" );
-	(void) fprintf( stderr, "%s: out of memory copying a string\n", argv0 );
-	exit( 1 );
+		syslog( LOG_CRIT, "out of memory copying a string" );
+		(void) fprintf( stderr, "%s: out of memory copying a string\n", argv0 );
+		exit( 1 );
 	}
     return newstr;
-    }
+}
 
 
-static void
-lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
-    {
+static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
+{
 #ifdef USE_IPV6
 
     struct addrinfo hints;
@@ -1354,7 +1356,7 @@ lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockad
     *gotv4P = 1;
 
 #endif /* USE_IPV6 */
-    }
+}
 
 
 static void

@@ -1,7 +1,7 @@
 # Generated automatically from Makefile.in by configure.
 # Makefile.in for thttpd
 #
-# Copyright � 1995,1998 by Jef Poskanzer <jef@mail.acme.com>.
+# Copyright � 1995,1998 by Jef Poskanzer <jef@mail.acme.com>.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,6 +33,7 @@ exec_prefix = ${prefix}
 # Pathname of directory to install the binary.
 BINDIR = ${exec_prefix}/sbin
 # Pathname of directory to install the man page.
+#安装用户手册的目录
 MANDIR = ${prefix}/man
 # Pathname of directory to install the CGI programs.
 WEBDIR = $(prefix)/www
