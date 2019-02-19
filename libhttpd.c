@@ -1741,7 +1741,15 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
     hc->conn_fd = accept( listen_fd, &sa.sa, &sz );
 #ifdef JI_DEBUG
 	printf("The ip type is %d\n",sa.sa.sa_family);
-	printf("The ip addr is %s\n",sa.sa.sa_data);
+	char ji=0;
+	printf("The ip addr is :");
+	for(ji=0;j<14;ji++)
+	{
+		printf("%d.",sa.sa.sa_data[ji]);
+	}
+	printf("\n");
+	printf("The accept fd is %d\n",listen_fd);
+	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif
     if ( hc->conn_fd < 0 )
 	{
