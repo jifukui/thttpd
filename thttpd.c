@@ -1536,6 +1536,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
     ** connections as fast as possible so we don't overrun the
     ** listen queue.
     */
+#ifdef JI_DEBUG
+	printf("Test new connect\n");
+#endif
     for (;;)
 	{
 		/* Is there room in the connection table? */
