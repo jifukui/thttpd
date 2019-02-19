@@ -1743,7 +1743,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
 	printf("The ip addr is :");
-	for(ji=0;j<14;ji++)
+	for(ji=0;ji<14;ji++)
 	{
 		printf("%d.",sa.sa.sa_data[ji]);
 	}
