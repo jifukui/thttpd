@@ -1740,8 +1740,8 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	*/
     hc->conn_fd = accept( listen_fd, &sa.sa, &sz );
 #ifdef JI_DEBUG
-	printf("The ip type is %d",sa.sa.sa_family);
-	printf("The ip addr is %d",sa.sa.sa_data);
+	printf("The ip type is %d\n",sa.sa.sa_family);
+	printf("The ip addr is %s\n",sa.sa.sa_data);
 #endif
     if ( hc->conn_fd < 0 )
 	{
