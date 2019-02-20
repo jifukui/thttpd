@@ -849,7 +849,7 @@ static void defang( char* str, char* dfstr, int dfsize )
 
 
 void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
-    {
+{
 #ifdef ERR_DIR
 
     char filename[1000];
@@ -865,8 +865,7 @@ void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, 
 	}
 
     /* Try server-wide error page. */
-    (void) my_snprintf( filename, sizeof(filename),
-	"%s/err%d.html", ERR_DIR, status );
+    (void) my_snprintf( filename, sizeof(filename),"%s/err%d.html", ERR_DIR, status );
     if ( send_err_file( hc, status, title, extraheads, filename ) )
 	{
 		return;
@@ -880,7 +879,7 @@ void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, 
     send_response( hc, status, title, extraheads, form, arg );
 
 #endif /* ERR_DIR */
-    }
+}
 
 
 #ifdef ERR_DIR
@@ -976,9 +975,8 @@ static int b64_decode_table[256] = {
 ** be at most 3/4 the size of the encoded, and may be smaller if there
 ** are padding characters (blanks, newlines).
 */
-static int
-b64_decode( const char* str, unsigned char* space, int size )
-    {
+static int b64_decode( const char* str, unsigned char* space, int size )
+{
     const char* cp;
     int space_idx, phase;
     int d, prev_d = 0;
@@ -989,66 +987,74 @@ b64_decode( const char* str, unsigned char* space, int size )
     for ( cp = str; *cp != '\0'; ++cp )
 	{
 	d = b64_decode_table[(int) ((unsigned char) *cp)];
-	if ( d != -1 )
+		if ( d != -1 )
 	    {
-	    switch ( phase )
-		{
-		case 0:
-		++phase;
-		break;
-		case 1:
-		c = ( ( prev_d << 2 ) | ( ( d & 0x30 ) >> 4 ) );
-		if ( space_idx < size )
-		    space[space_idx++] = c;
-		++phase;
-		break;
-		case 2:
-		c = ( ( ( prev_d & 0xf ) << 4 ) | ( ( d & 0x3c ) >> 2 ) );
-		if ( space_idx < size )
-		    space[space_idx++] = c;
-		++phase;
-		break;
-		case 3:
-		c = ( ( ( prev_d & 0x03 ) << 6 ) | d );
-		if ( space_idx < size )
-		    space[space_idx++] = c;
-		phase = 0;
-		break;
-		}
-	    prev_d = d;
+	    	switch ( phase )
+			{
+				case 0:
+					++phase;
+					break;
+				case 1:
+					c = ( ( prev_d << 2 ) | ( ( d & 0x30 ) >> 4 ) );
+					if ( space_idx < size )
+		    		{
+						space[space_idx++] = c;
+					}
+					++phase;
+					break;
+				case 2:
+					c = ( ( ( prev_d & 0xf ) << 4 ) | ( ( d & 0x3c ) >> 2 ) );
+					if ( space_idx < size )
+		    		{
+						space[space_idx++] = c;
+					}
+					++phase;
+					break;
+				case 3:
+					c = ( ( ( prev_d & 0x03 ) << 6 ) | d );
+					if ( space_idx < size )
+		    		{
+						space[space_idx++] = c;
+					}
+					phase = 0;
+					break;
+			}
+	    	prev_d = d;
 	    }
 	}
     return space_idx;
-    }
+}
 
 
 /* Returns -1 == unauthorized, 0 == no auth file, 1 = authorized. */
-static int
-auth_check( httpd_conn* hc, char* dirname  )
-    {
+static int auth_check( httpd_conn* hc, char* dirname  )
+{
     if ( hc->hs->global_passwd )
 	{
-	char* topdir;
-	if ( hc->hs->vhost && hc->hostdir[0] != '\0' )
-	    topdir = hc->hostdir;
-	else
-	    topdir = ".";
-	switch ( auth_check2( hc, topdir ) )
+		char* topdir;
+		if ( hc->hs->vhost && hc->hostdir[0] != '\0' )
 	    {
-	    case -1:
-	    return -1;
-	    case 1:
-	    return 1;
+			topdir = hc->hostdir;
+		}
+		else
+	    {
+			topdir = ".";
+		}
+		switch ( auth_check2( hc, topdir ) )
+	    {
+	 		case -1:
+	    		return -1;
+	    	case 1:
+	    		return 1;
 	    }
 	}
     return auth_check2( hc, dirname );
-    }
+}
 
 
 /* Returns -1 == unauthorized, 0 == no auth file, 1 = authorized. */
-static int
-auth_check2( httpd_conn* hc, char* dirname  )
-    {
+static int auth_check2( httpd_conn* hc, char* dirname  )
+{
     static char* authpath;
     static size_t maxauthpath = 0;
     struct stat sb;
@@ -1068,63 +1074,59 @@ auth_check2( httpd_conn* hc, char* dirname  )
     static size_t maxprevcryp = 0;
 
     /* Construct auth filename. */
-    httpd_realloc_str(
-	&authpath, &maxauthpath, strlen( dirname ) + 1 + sizeof(AUTH_FILE) );
+    httpd_realloc_str(&authpath, &maxauthpath, strlen( dirname ) + 1 + sizeof(AUTH_FILE) );
     (void) my_snprintf( authpath, maxauthpath, "%s/%s", dirname, AUTH_FILE );
 
     /* Does this directory have an auth file? */
     if ( stat( authpath, &sb ) < 0 )
 	/* Nope, let the request go through. */
-	return 0;
+	{
+		return 0;
+	}
 
     /* Does this request contain basic authorization info? */
-    if ( hc->authorization[0] == '\0' ||
-	 strncmp( hc->authorization, "Basic ", 6 ) != 0 )
+    if ( hc->authorization[0] == '\0' ||strncmp( hc->authorization, "Basic ", 6 ) != 0 )
 	{
-	/* Nope, return a 401 Unauthorized. */
-	send_authenticate( hc, dirname );
-	return -1;
+		/* Nope, return a 401 Unauthorized. */
+		send_authenticate( hc, dirname );
+		return -1;
 	}
 
     /* Decode it. */
-    l = b64_decode(
-	&(hc->authorization[6]), (unsigned char*) authinfo,
-	sizeof(authinfo) - 1 );
+    l = b64_decode(&(hc->authorization[6]), (unsigned char*) authinfo,sizeof(authinfo) - 1 );
     authinfo[l] = '\0';
     /* Split into user and password. */
     authpass = strchr( authinfo, ':' );
     if ( authpass == (char*) 0 )
 	{
-	/* No colon?  Bogus auth info. */
-	send_authenticate( hc, dirname );
-	return -1;
+		/* No colon?  Bogus auth info. */
+		send_authenticate( hc, dirname );
+		return -1;
 	}
     *authpass++ = '\0';
     /* If there are more fields, cut them off. */
     colon = strchr( authpass, ':' );
     if ( colon != (char*) 0 )
-	*colon = '\0';
+	{
+		*colon = '\0';
+	}
 
     /* See if we have a cached entry and can use it. */
-    if ( maxprevauthpath != 0 &&
-	 strcmp( authpath, prevauthpath ) == 0 &&
-	 sb.st_mtime == prevmtime &&
-	 strcmp( authinfo, prevuser ) == 0 )
+    if ( maxprevauthpath != 0 &&strcmp( authpath, prevauthpath ) == 0 &&sb.st_mtime == prevmtime &&strcmp( authinfo, prevuser ) == 0 )
 	{
 	/* Yes.  Check against the cached encrypted password. */
-	if ( strcmp( crypt( authpass, prevcryp ), prevcryp ) == 0 )
+		if ( strcmp( crypt( authpass, prevcryp ), prevcryp ) == 0 )
 	    {
-	    /* Ok! */
-	    httpd_realloc_str(
-		&hc->remoteuser, &hc->maxremoteuser, strlen( authinfo ) );
-	    (void) strcpy( hc->remoteuser, authinfo );
-	    return 1;
+	    	/* Ok! */
+	    	httpd_realloc_str(&hc->remoteuser, &hc->maxremoteuser, strlen( authinfo ) );
+	    	(void) strcpy( hc->remoteuser, authinfo );
+	    	return 1;
 	    }
-	else
+		else
 	    {
-	    /* No. */
-	    send_authenticate( hc, dirname );
-	    return -1;
+	    	/* No. */
+	    	send_authenticate( hc, dirname );
+	    	return -1;
 	    }
 	}
 
@@ -1132,59 +1134,55 @@ auth_check2( httpd_conn* hc, char* dirname  )
     fp = fopen( authpath, "r" );
     if ( fp == (FILE*) 0 )
 	{
-	/* The file exists but we can't open it?  Disallow access. */
-	syslog(
-	    LOG_ERR, "%.80s auth file %.80s could not be opened - %m",
-	    httpd_ntoa( &hc->client_addr ), authpath );
-	httpd_send_err(
-	    hc, 403, err403title, "",
-	    ERROR_FORM( err403form, "The requested URL '%.80s' is protected by an authentication file, but the authentication file cannot be opened.\n" ),
-	    hc->encodedurl );
-	return -1;
+		/* The file exists but we can't open it?  Disallow access. */
+		syslog(LOG_ERR, "%.80s auth file %.80s could not be opened - %m",httpd_ntoa( &hc->client_addr ), authpath );
+		httpd_send_err(hc, 403, err403title, "",ERROR_FORM( err403form, "The requested URL '%.80s' is protected by an authentication file, but the authentication file cannot be opened.\n" ),hc->encodedurl );
+		return -1;
 	}
 
     /* Read it. */
     while ( fgets( line, sizeof(line), fp ) != (char*) 0 )
 	{
-	/* Nuke newline. */
-	l = strlen( line );
-	if ( line[l - 1] == '\n' )
-	    line[l - 1] = '\0';
-	/* Split into user and encrypted password. */
-	cryp = strchr( line, ':' );
-	if ( cryp == (char*) 0 )
-	    continue;
-	*cryp++ = '\0';
-	/* Is this the right user? */
-	if ( strcmp( line, authinfo ) == 0 )
+		/* Nuke newline. */
+		l = strlen( line );
+		if ( line[l - 1] == '\n' )
 	    {
-	    /* Yes. */
-	    (void) fclose( fp );
-	    /* So is the password right? */
-	    if ( strcmp( crypt( authpass, cryp ), cryp ) == 0 )
-		{
-		/* Ok! */
-		httpd_realloc_str(
-		    &hc->remoteuser, &hc->maxremoteuser, strlen( line ) );
-		(void) strcpy( hc->remoteuser, line );
-		/* And cache this user's info for next time. */
-		httpd_realloc_str(
-		    &prevauthpath, &maxprevauthpath, strlen( authpath ) );
-		(void) strcpy( prevauthpath, authpath );
-		prevmtime = sb.st_mtime;
-		httpd_realloc_str(
-		    &prevuser, &maxprevuser, strlen( authinfo ) );
-		(void) strcpy( prevuser, authinfo );
-		httpd_realloc_str( &prevcryp, &maxprevcryp, strlen( cryp ) );
-		(void) strcpy( prevcryp, cryp );
-		return 1;
+			line[l - 1] = '\0';
 		}
-	    else
-		{
-		/* No. */
-		send_authenticate( hc, dirname );
-		return -1;
+		/* Split into user and encrypted password. */
+		cryp = strchr( line, ':' );
+		if ( cryp == (char*) 0 )
+	    {
+			continue;
 		}
+		*cryp++ = '\0';
+		/* Is this the right user? */
+		if ( strcmp( line, authinfo ) == 0 )
+	    {
+	    	/* Yes. */
+	    	(void) fclose( fp );
+	    	/* So is the password right? */
+	    	if ( strcmp( crypt( authpass, cryp ), cryp ) == 0 )
+			{
+				/* Ok! */
+				httpd_realloc_str(&hc->remoteuser, &hc->maxremoteuser, strlen( line ) );
+				(void) strcpy( hc->remoteuser, line );
+				/* And cache this user's info for next time. */
+				httpd_realloc_str(&prevauthpath, &maxprevauthpath, strlen( authpath ) );
+				(void) strcpy( prevauthpath, authpath );
+				prevmtime = sb.st_mtime;
+				httpd_realloc_str(&prevuser, &maxprevuser, strlen( authinfo ) );
+				(void) strcpy( prevuser, authinfo );
+				httpd_realloc_str( &prevcryp, &maxprevcryp, strlen( cryp ) );
+				(void) strcpy( prevcryp, cryp );
+				return 1;
+			}
+	    	else
+			{
+				/* No. */
+				send_authenticate( hc, dirname );
+				return -1;
+			}
 	    }
 	}
 
@@ -1192,14 +1190,13 @@ auth_check2( httpd_conn* hc, char* dirname  )
     (void) fclose( fp );
     send_authenticate( hc, dirname );
     return -1;
-    }
+}
 
 #endif /* AUTH_FILE */
 
 
-static void
-send_dirredirect( httpd_conn* hc )
-    {
+static void send_dirredirect( httpd_conn* hc )
+{
     static char* location;
     static char* header;
     static size_t maxlocation = 0, maxheader = 0;
@@ -1207,111 +1204,109 @@ send_dirredirect( httpd_conn* hc )
 
     if ( hc->query[0] != '\0')
 	{
-	char* cp = strchr( hc->encodedurl, '?' );
-	if ( cp != (char*) 0 )	/* should always find it */
-	    *cp = '\0';
-	httpd_realloc_str(
-	    &location, &maxlocation,
-	    strlen( hc->encodedurl ) + 2 + strlen( hc->query ) );
-	(void) my_snprintf( location, maxlocation,
-	    "%s/?%s", hc->encodedurl, hc->query );
+		char* cp = strchr( hc->encodedurl, '?' );
+		if ( cp != (char*) 0 )	/* should always find it */
+	    {
+			*cp = '\0';
+		}
+		httpd_realloc_str(&location, &maxlocation,strlen( hc->encodedurl ) + 2 + strlen( hc->query ) );
+		(void) my_snprintf( location, maxlocation,"%s/?%s", hc->encodedurl, hc->query );
 	}
     else
 	{
-	httpd_realloc_str(
-	    &location, &maxlocation, strlen( hc->encodedurl ) + 1 );
-	(void) my_snprintf( location, maxlocation,
-	    "%s/", hc->encodedurl );
+		httpd_realloc_str(&location, &maxlocation, strlen( hc->encodedurl ) + 1 );
+		(void) my_snprintf( location, maxlocation,"%s/", hc->encodedurl );
 	}
-    httpd_realloc_str(
-	&header, &maxheader, sizeof(headstr) + strlen( location ) );
-    (void) my_snprintf( header, maxheader,
-	"%s%s\015\012", headstr, location );
+    httpd_realloc_str(&header, &maxheader, sizeof(headstr) + strlen( location ) );
+    (void) my_snprintf( header, maxheader,"%s%s\015\012", headstr, location );
     send_response( hc, 302, err302title, header, err302form, location );
-    }
+}
 
 
-char*
-httpd_method_str( int method )
-    {
+char* httpd_method_str( int method )
+{
     switch ( method )
 	{
-	case METHOD_GET: return "GET";
-	case METHOD_HEAD: return "HEAD";
-	case METHOD_POST: return "POST";
-	case METHOD_PUT: return "PUT";
-	case METHOD_DELETE: return "DELETE";
-	case METHOD_TRACE: return "TRACE";
-	default: return "UNKNOWN";
+		case METHOD_GET: return "GET";
+		case METHOD_HEAD: return "HEAD";
+		case METHOD_POST: return "POST";
+		case METHOD_PUT: return "PUT";
+		case METHOD_DELETE: return "DELETE";
+		case METHOD_TRACE: return "TRACE";
+		default: return "UNKNOWN";
 	}
-    }
+}
 
 
-static int
-hexit( char c )
-    {
+static int hexit( char c )
+{
     if ( c >= '0' && c <= '9' )
-	return c - '0';
+	{
+		return c - '0';
+	}
     if ( c >= 'a' && c <= 'f' )
-	return c - 'a' + 10;
+	{
+		return c - 'a' + 10;
+	}
     if ( c >= 'A' && c <= 'F' )
-	return c - 'A' + 10;
+	{
+		return c - 'A' + 10;
+	}
     return 0;           /* shouldn't happen, we're guarded by isxdigit() */
-    }
+}
 
 
 /* Copies and decodes a string.  It's ok for from and to to be the
 ** same string.
 */
-static void
-strdecode( char* to, char* from )
-    {
+static void strdecode( char* to, char* from )
+{
     for ( ; *from != '\0'; ++to, ++from )
 	{
-	if ( from[0] == '%' && isxdigit( from[1] ) && isxdigit( from[2] ) )
+		if ( from[0] == '%' && isxdigit( from[1] ) && isxdigit( from[2] ) )
 	    {
-	    *to = hexit( from[1] ) * 16 + hexit( from[2] );
-	    from += 2;
+	    	*to = hexit( from[1] ) * 16 + hexit( from[2] );
+	    	from += 2;
 	    }
-	else
-	    *to = *from;
+		else
+	    {
+			*to = *from;
+		}
 	}
     *to = '\0';
-    }
+}
 
 
 #ifdef GENERATE_INDEXES
 /* Copies and encodes a string. */
-static void
-strencode( char* to, int tosize, char* from )
-    {
+static void strencode( char* to, int tosize, char* from )
+{
     int tolen;
 
     for ( tolen = 0; *from != '\0' && tolen + 4 < tosize; ++from )
 	{
-	if ( isalnum(*from) || strchr( "/_.-~", *from ) != (char*) 0 )
+		if ( isalnum(*from) || strchr( "/_.-~", *from ) != (char*) 0 )
 	    {
-	    *to = *from;
-	    ++to;
-	    ++tolen;
+	    	*to = *from;
+	    	++to;
+	    	++tolen;
 	    }
-	else
+		else
 	    {
-	    (void) sprintf( to, "%%%02x", (int) *from & 0xff );
-	    to += 3;
-	    tolen += 3;
+	    	(void) sprintf( to, "%%%02x", (int) *from & 0xff );
+	    	to += 3;
+	    	tolen += 3;
 	    }
 	}
     *to = '\0';
-    }
+}
 #endif /* GENERATE_INDEXES */
 
 
 #ifdef TILDE_MAP_1
 /* Map a ~username/whatever URL into <prefix>/username. */
-static int
-tilde_map_1( httpd_conn* hc )
-    {
+static int tilde_map_1( httpd_conn* hc )
+{
     static char* temp;
     static size_t maxtemp = 0;
     int len;
@@ -1324,17 +1319,18 @@ tilde_map_1( httpd_conn* hc )
 	&hc->expnfilename, &hc->maxexpnfilename, strlen( prefix ) + 1 + len );
     (void) strcpy( hc->expnfilename, prefix );
     if ( prefix[0] != '\0' )
-	(void) strcat( hc->expnfilename, "/" );
+	{
+		(void) strcat( hc->expnfilename, "/" );
+	}
     (void) strcat( hc->expnfilename, temp );
     return 1;
-    }
+}
 #endif /* TILDE_MAP_1 */
 
 #ifdef TILDE_MAP_2
 /* Map a ~username/whatever URL into <user's homedir>/<postfix>. */
-static int
-tilde_map_2( httpd_conn* hc )
-    {
+static int tilde_map_2( httpd_conn* hc )
+{
     static char* temp;
     static size_t maxtemp = 0;
     static char* postfix = TILDE_MAP_2;
@@ -1348,50 +1344,53 @@ tilde_map_2( httpd_conn* hc )
     (void) strcpy( temp, &hc->expnfilename[1] );
     cp = strchr( temp, '/' );
     if ( cp != (char*) 0 )
-	*cp++ = '\0';
+	{
+		*cp++ = '\0';
+	}
     else
-	cp = "";
+	{
+		cp = "";
+	}
 
     /* Get the passwd entry. */
     pw = getpwnam( temp );
     if ( pw == (struct passwd*) 0 )
-	return 0;
+	{
+		return 0;
+	}
 
     /* Set up altdir. */
-    httpd_realloc_str(
-	&hc->altdir, &hc->maxaltdir,
-	strlen( pw->pw_dir ) + 1 + strlen( postfix ) );
+    httpd_realloc_str(&hc->altdir, &hc->maxaltdir,strlen( pw->pw_dir ) + 1 + strlen( postfix ) );
     (void) strcpy( hc->altdir, pw->pw_dir );
     if ( postfix[0] != '\0' )
 	{
-	(void) strcat( hc->altdir, "/" );
-	(void) strcat( hc->altdir, postfix );
+		(void) strcat( hc->altdir, "/" );
+		(void) strcat( hc->altdir, postfix );
 	}
     alt = expand_symlinks( hc->altdir, &rest, 0, 1 );
     if ( rest[0] != '\0' )
-	return 0;
+	{
+		return 0;
+	}
     httpd_realloc_str( &hc->altdir, &hc->maxaltdir, strlen( alt ) );
     (void) strcpy( hc->altdir, alt );
 
     /* And the filename becomes altdir plus the post-~ part of the original. */
-    httpd_realloc_str(
-	&hc->expnfilename, &hc->maxexpnfilename,
-	strlen( hc->altdir ) + 1 + strlen( cp ) );
-    (void) my_snprintf( hc->expnfilename, hc->maxexpnfilename,
-	"%s/%s", hc->altdir, cp );
+    httpd_realloc_str(&hc->expnfilename, &hc->maxexpnfilename,strlen( hc->altdir ) + 1 + strlen( cp ) );
+    (void) my_snprintf( hc->expnfilename, hc->maxexpnfilename,"%s/%s", hc->altdir, cp );
 
     /* For this type of tilde mapping, we want to defeat vhost mapping. */
     hc->tildemapped = 1;
 
     return 1;
-    }
+}
 #endif /* TILDE_MAP_2 */
 
 
 /* Virtual host mapping. */
-static int
-vhost_map( httpd_conn* hc )
-    {
+/**虚拟主机映射*/
+static int vhost_map( httpd_conn* hc )
+{
     httpd_sockaddr sa;
     socklen_t sz;
     static char* tempfilename;
@@ -1405,36 +1404,48 @@ vhost_map( httpd_conn* hc )
 
     /* Figure out the virtual hostname. */
     if ( hc->reqhost[0] != '\0' )
-	hc->hostname = hc->reqhost;
+	{
+		hc->hostname = hc->reqhost;
+	}
     else if ( hc->hdrhost[0] != '\0' )
-	hc->hostname = hc->hdrhost;
+	{
+		hc->hostname = hc->hdrhost;
+	}
     else
 	{
-	sz = sizeof(sa);
-	if ( getsockname( hc->conn_fd, &sa.sa, &sz ) < 0 )
+		sz = sizeof(sa);
+		if ( getsockname( hc->conn_fd, &sa.sa, &sz ) < 0 )
 	    {
-	    syslog( LOG_ERR, "getsockname - %m" );
-	    return 0;
+	    	syslog( LOG_ERR, "getsockname - %m" );
+	    	return 0;
 	    }
-	hc->hostname = httpd_ntoa( &sa );
+		hc->hostname = httpd_ntoa( &sa );
 	}
     /* Pound it to lower case. */
     for ( cp1 = hc->hostname; *cp1 != '\0'; ++cp1 )
-	if ( isupper( *cp1 ) )
-	    *cp1 = tolower( *cp1 );
+	{
+		if ( isupper( *cp1 ) )
+	    {
+			*cp1 = tolower( *cp1 );
+		}
+	}
 
     if ( hc->tildemapped )
-	return 1;
+	{
+		return 1;
+	}
 
     /* Figure out the host directory. */
 #ifdef VHOST_DIRLEVELS
-    httpd_realloc_str(
-	&hc->hostdir, &hc->maxhostdir,
-	strlen( hc->hostname ) + 2 * VHOST_DIRLEVELS );
+    httpd_realloc_str(&hc->hostdir, &hc->maxhostdir,strlen( hc->hostname ) + 2 * VHOST_DIRLEVELS );
     if ( strncmp( hc->hostname, "www.", 4 ) == 0 )
-	cp1 = &hc->hostname[4];
+	{
+		cp1 = &hc->hostname[4];
+	}
     else
-	cp1 = hc->hostname;
+	{
+		cp1 = hc->hostname;
+	}
     for ( cp2 = hc->hostdir, i = 0; i < VHOST_DIRLEVELS; ++i )
 	{
 	/* Skip dots in the hostname.  If we don't, then we get vhost
@@ -1443,15 +1454,21 @@ vhost_map( httpd_conn* hc )
 	** of `if' for it's possible to have a hostname formed with two
 	** dots at the end of it.
 	*/
-	while ( *cp1 == '.' )
-	    ++cp1;
+		while ( *cp1 == '.' )
+	    {
+			++cp1;
+		}
 	/* Copy a character from the hostname, or '_' if we ran out. */
-	if ( *cp1 != '\0' )
-	    *cp2++ = *cp1++;
-	else
-	    *cp2++ = '_';
-	/* Copy a slash. */
-	*cp2++ = '/';
+		if ( *cp1 != '\0' )
+	    {
+			*cp2++ = *cp1++;
+		}
+		else
+	    {
+			*cp2++ = '_';
+		}
+		/* Copy a slash. */
+		*cp2++ = '/';
 	}
     (void) strcpy( cp2, hc->hostname );
 #else /* VHOST_DIRLEVELS */
@@ -1470,7 +1487,7 @@ vhost_map( httpd_conn* hc )
     (void) strcat( hc->expnfilename, "/" );
     (void) strcat( hc->expnfilename, tempfilename );
     return 1;
-    }
+}
 
 
 /* Expands all symlinks in the given filename, eliding ..'s and leading /'s.
@@ -1481,9 +1498,8 @@ vhost_map( httpd_conn* hc )
 ** This is a fairly nice little routine.  It handles any size filenames
 ** without excessive mallocs.
 */
-static char*
-expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped )
-    {
+static char* expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped )
+{
     static char* checked;
     static char* rest;
     char lnk[5000];
@@ -1508,22 +1524,22 @@ expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped
 	** approved CGIs any more.  The workaround is to use the central
 	** URL for the CGI instead of a local symlinked one.
 	*/
-	struct stat sb;
-	if ( stat( path, &sb ) != -1 )
+		struct stat sb;
+		if ( stat( path, &sb ) != -1 )
 	    {
-	    checkedlen = strlen( path );
-	    httpd_realloc_str( &checked, &maxchecked, checkedlen );
-	    (void) strcpy( checked, path );
-	    /* Trim trailing slashes. */
-	    while ( checked[checkedlen - 1] == '/' )
-		{
-		checked[checkedlen - 1] = '\0';
-		--checkedlen;
-		}
-	    httpd_realloc_str( &rest, &maxrest, 0 );
-	    rest[0] = '\0';
-	    *restP = rest;
-	    return checked;
+	    	checkedlen = strlen( path );
+	    	httpd_realloc_str( &checked, &maxchecked, checkedlen );
+	    	(void) strcpy( checked, path );
+	    	/* Trim trailing slashes. */
+	    	while ( checked[checkedlen - 1] == '/' )
+			{
+				checked[checkedlen - 1] = '\0';
+				--checkedlen;
+			}
+	    	httpd_realloc_str( &rest, &maxrest, 0 );
+	    	rest[0] = '\0';
+	    	*restP = rest;
+	    	return checked;
 	    }
 	}
 
@@ -1535,14 +1551,18 @@ expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped
     httpd_realloc_str( &rest, &maxrest, restlen );
     (void) strcpy( rest, path );
     if ( rest[restlen - 1] == '/' )
-	rest[--restlen] = '\0';         /* trim trailing slash */
+	{
+		rest[--restlen] = '\0';         /* trim trailing slash */
+	}
     if ( ! tildemapped )
-	/* Remove any leading slashes. */
-	while ( rest[0] == '/' )
+	{
+		/* Remove any leading slashes. */
+		while ( rest[0] == '/' )
 	    {
-	    (void) ol_strcpy( rest, &(rest[1]) );
-	    --restlen;
+	    	(void) ol_strcpy( rest, &(rest[1]) );
+	    	--restlen;
 	    }
+	}
     r = rest;
     nlinks = 0;
 
@@ -1558,117 +1578,144 @@ expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped
 	/* Grab one component from r and transfer it to checked. */
 	cp1 = strchr( r, '/' );
 	if ( cp1 != (char*) 0 )
-	    {
+	{
 	    i = cp1 - r;
 	    if ( i == 0 )
 		{
-		/* Special case for absolute paths. */
-		httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 );
-		(void) strncpy( &checked[checkedlen], r, 1 );
-		checkedlen += 1;
+			/* Special case for absolute paths. */
+			httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 );
+			(void) strncpy( &checked[checkedlen], r, 1 );
+			checkedlen += 1;
 		}
 	    else if ( strncmp( r, "..", MAX( i, 2 ) ) == 0 )
 		{
 		/* Ignore ..'s that go above the start of the path. */
-		if ( checkedlen != 0 )
+			if ( checkedlen != 0 )
 		    {
-		    cp2 = strrchr( checked, '/' );
-		    if ( cp2 == (char*) 0 )
-			checkedlen = 0;
-		    else if ( cp2 == checked )
-			checkedlen = 1;
-		    else
-			checkedlen = cp2 - checked;
+		    	cp2 = strrchr( checked, '/' );
+		    	if ( cp2 == (char*) 0 )
+				{
+					checkedlen = 0;
+				}
+		    	else if ( cp2 == checked )
+				{
+					checkedlen = 1;
+				}
+		    	else
+				{
+					checkedlen = cp2 - checked;
+				}
 		    }
 		}
 	    else
 		{
-		httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 + i );
-		if ( checkedlen > 0 && checked[checkedlen-1] != '/' )
-		    checked[checkedlen++] = '/';
-		(void) strncpy( &checked[checkedlen], r, i );
-		checkedlen += i;
+			httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 + i );
+			if ( checkedlen > 0 && checked[checkedlen-1] != '/' )
+		    {
+				checked[checkedlen++] = '/';
+			}
+			(void) strncpy( &checked[checkedlen], r, i );
+			checkedlen += i;
 		}
 	    checked[checkedlen] = '\0';
 	    r += i + 1;
 	    restlen -= i + 1;
-	    }
+	}
 	else
-	    {
+	{
 	    /* No slashes remaining, r is all one component. */
 	    if ( strcmp( r, ".." ) == 0 )
 		{
-		/* Ignore ..'s that go above the start of the path. */
-		if ( checkedlen != 0 )
+			/* Ignore ..'s that go above the start of the path. */
+			if ( checkedlen != 0 )
 		    {
-		    cp2 = strrchr( checked, '/' );
-		    if ( cp2 == (char*) 0 )
-			checkedlen = 0;
-		    else if ( cp2 == checked )
-			checkedlen = 1;
-		    else
-			checkedlen = cp2 - checked;
-		    checked[checkedlen] = '\0';
+		    	cp2 = strrchr( checked, '/' );
+		    	if ( cp2 == (char*) 0 )
+				{
+					checkedlen = 0;
+				}
+		    	else if ( cp2 == checked )
+				{
+					checkedlen = 1;
+				}
+		    	else
+				{
+					checkedlen = cp2 - checked;
+				}
+		    	checked[checkedlen] = '\0';
 		    }
 		}
 	    else
 		{
-		httpd_realloc_str(
-		    &checked, &maxchecked, checkedlen + 1 + restlen );
-		if ( checkedlen > 0 && checked[checkedlen-1] != '/' )
-		    checked[checkedlen++] = '/';
-		(void) strcpy( &checked[checkedlen], r );
-		checkedlen += restlen;
+			httpd_realloc_str(&checked, &maxchecked, checkedlen + 1 + restlen );
+			if ( checkedlen > 0 && checked[checkedlen-1] != '/' )
+		    {
+				checked[checkedlen++] = '/';
+			}
+			(void) strcpy( &checked[checkedlen], r );
+			checkedlen += restlen;
 		}
 	    r += restlen;
 	    restlen = 0;
-	    }
+	}
 
 	/* Try reading the current filename as a symlink */
 	if ( checked[0] == '\0' )
-	    continue;
+	{
+		continue;
+	}
 	linklen = readlink( checked, lnk, sizeof(lnk) - 1 );
 	if ( linklen == -1 )
-	    {
+	{
 	    if ( errno == EINVAL )
-		continue;               /* not a symlink */
+		{
+			continue;               /* not a symlink */
+		}
 	    if ( errno == EACCES || errno == ENOENT || errno == ENOTDIR )
 		{
-		/* That last component was bogus.  Restore and return. */
-		*restP = r - ( prevrestlen - restlen );
-		if ( prevcheckedlen == 0 )
-		    (void) strcpy( checked, "." );
-		else
-		    checked[prevcheckedlen] = '\0';
-		return checked;
+			/* That last component was bogus.  Restore and return. */
+			*restP = r - ( prevrestlen - restlen );
+			if ( prevcheckedlen == 0 )
+		    {
+				(void) strcpy( checked, "." );
+			}
+			else
+		    {
+				checked[prevcheckedlen] = '\0';
+			}
+			return checked;
 		}
 	    syslog( LOG_ERR, "readlink %.80s - %m", checked );
 	    return (char*) 0;
-	    }
+	}
 	++nlinks;
 	if ( nlinks > MAX_LINKS )
-	    {
+	{
 	    syslog( LOG_ERR, "too many symlinks in %.80s", path );
 	    return (char*) 0;
-	    }
+	}
 	lnk[linklen] = '\0';
 	if ( lnk[linklen - 1] == '/' )
-	    lnk[--linklen] = '\0';     /* trim trailing slash */
+	{
+		lnk[--linklen] = '\0';     /* trim trailing slash */
+	}
 
 	/* Insert the link contents in front of the rest of the filename. */
 	if ( restlen != 0 )
-	    {
+	{
 	    (void) ol_strcpy( rest, r );
 	    httpd_realloc_str( &rest, &maxrest, restlen + linklen + 1 );
 	    for ( i = restlen; i >= 0; --i )
-		rest[i + linklen + 1] = rest[i];
+		{
+			rest[i + linklen + 1] = rest[i];
+		}
 	    (void) strcpy( rest, lnk );
 	    rest[linklen] = '/';
 	    restlen += linklen + 1;
 	    r = rest;
-	    }
+	}
 	else
-	    {
+	{
 	    /* There's nothing left in the filename, so the link contents
 	    ** becomes the rest.
 	    */
@@ -1676,28 +1723,30 @@ expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped
 	    (void) strcpy( rest, lnk );
 	    restlen = linklen;
 	    r = rest;
-	    }
+	}
 
 	if ( rest[0] == '/' )
-	    {
+	{
 	    /* There must have been an absolute symlink - zero out checked. */
 	    checked[0] = '\0';
 	    checkedlen = 0;
-	    }
+	}
 	else
-	    {
+	{
 	    /* Re-check this component. */
 	    checkedlen = prevcheckedlen;
 	    checked[checkedlen] = '\0';
-	    }
+	}
 	}
 
     /* Ok. */
     *restP = r;
     if ( checked[0] == '\0' )
-	(void) strcpy( checked, "." );
+	{
+		(void) strcpy( checked, "." );
+	}
     return checked;
-    }
+}
 
 /**http的连接处理*/
 int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
