@@ -193,35 +193,47 @@ static long long atoll( const char* str );
 static int sub_process = 0;
 
 
-static void
-check_options( void )
-    {
+static void check_options( void )
+{
 #if defined(TILDE_MAP_1) && defined(TILDE_MAP_2)
     syslog( LOG_CRIT, "both TILDE_MAP_1 and TILDE_MAP_2 are defined" );
     exit( 1 );
 #endif /* both */
-    }
+}
 
 
-static void
-free_httpd_server( httpd_server* hs )
-    {
+static void free_httpd_server( httpd_server* hs )
+{
     if ( hs->binding_hostname != (char*) 0 )
-	free( (void*) hs->binding_hostname );
+	{
+		free( (void*) hs->binding_hostname );
+	}
     if ( hs->cwd != (char*) 0 )
-	free( (void*) hs->cwd );
+	{
+		free( (void*) hs->cwd );
+	}
     if ( hs->cgi_pattern != (char*) 0 )
-	free( (void*) hs->cgi_pattern );
+	{
+		free( (void*) hs->cgi_pattern );
+	}
     if ( hs->charset != (char*) 0 )
-	free( (void*) hs->charset );
+	{
+		free( (void*) hs->charset );
+	}
     if ( hs->p3p != (char*) 0 )
-	free( (void*) hs->p3p );
+	{
+		free( (void*) hs->p3p );
+	}
     if ( hs->url_pattern != (char*) 0 )
-	free( (void*) hs->url_pattern );
+	{
+		free( (void*) hs->url_pattern );
+	}
     if ( hs->local_pattern != (char*) 0 )
-	free( (void*) hs->local_pattern );
+	{
+		free( (void*) hs->local_pattern );
+	}
     free( (void*) hs );
-    }
+}
 
 /**http服务器对象初始化*/
 httpd_server* httpd_initialize(
@@ -393,25 +405,24 @@ httpd_server* httpd_initialize(
 }
 
 
-static int
-initialize_listen_socket( httpd_sockaddr* saP )
-    {
+static int initialize_listen_socket( httpd_sockaddr* saP )
+{
     int listen_fd;
     int on, flags;
 
     /* Check sockaddr. */
     if ( ! sockaddr_check( saP ) )
 	{
-	syslog( LOG_CRIT, "unknown sockaddr family on listen socket" );
-	return -1;
+		syslog( LOG_CRIT, "unknown sockaddr family on listen socket" );
+		return -1;
 	}
 
     /* Create socket. */
     listen_fd = socket( saP->sa.sa_family, SOCK_STREAM, 0 );
     if ( listen_fd < 0 )
 	{
-	syslog( LOG_CRIT, "socket %.80s - %m", httpd_ntoa( saP ) );
-	return -1;
+		syslog( LOG_CRIT, "socket %.80s - %m", httpd_ntoa( saP ) );
+		return -1;
 	}
     (void) fcntl( listen_fd, F_SETFD, 1 );
 
@@ -420,38 +431,39 @@ initialize_listen_socket( httpd_sockaddr* saP )
     if ( setsockopt(
 	     listen_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &on,
 	     sizeof(on) ) < 0 )
-	syslog( LOG_CRIT, "setsockopt SO_REUSEADDR - %m" );
+	{
+		syslog( LOG_CRIT, "setsockopt SO_REUSEADDR - %m" );
 
+	}
     /* Bind to it. */
     if ( bind( listen_fd, &saP->sa, sockaddr_len( saP ) ) < 0 )
 	{
-	syslog(
-	    LOG_CRIT, "bind %.80s - %m", httpd_ntoa( saP ) );
-	(void) close( listen_fd );
-	return -1;
+		syslog(LOG_CRIT, "bind %.80s - %m", httpd_ntoa( saP ) );
+		(void) close( listen_fd );
+		return -1;
 	}
 
     /* Set the listen file descriptor to no-delay / non-blocking mode. */
     flags = fcntl( listen_fd, F_GETFL, 0 );
     if ( flags == -1 )
 	{
-	syslog( LOG_CRIT, "fcntl F_GETFL - %m" );
-	(void) close( listen_fd );
-	return -1;
+		syslog( LOG_CRIT, "fcntl F_GETFL - %m" );
+		(void) close( listen_fd );
+		return -1;
 	}
     if ( fcntl( listen_fd, F_SETFL, flags | O_NDELAY ) < 0 )
 	{
-	syslog( LOG_CRIT, "fcntl O_NDELAY - %m" );
-	(void) close( listen_fd );
-	return -1;
+		syslog( LOG_CRIT, "fcntl O_NDELAY - %m" );
+		(void) close( listen_fd );
+		return -1;
 	}
 
     /* Start a listen going. */
     if ( listen( listen_fd, LISTEN_BACKLOG ) < 0 )
 	{
-	syslog( LOG_CRIT, "listen - %m" );
-	(void) close( listen_fd );
-	return -1;
+		syslog( LOG_CRIT, "listen - %m" );
+		(void) close( listen_fd );
+		return -1;
 	}
 
     /* Use accept filtering, if available. */
@@ -462,51 +474,52 @@ initialize_listen_socket( httpd_sockaddr* saP )
 #else
 #define ACCEPT_FILTER_NAME "dataready"
 #endif
-    struct accept_filter_arg af;
-    (void) bzero( &af, sizeof(af) );
-    (void) strcpy( af.af_name, ACCEPT_FILTER_NAME );
-    (void) setsockopt(
-	listen_fd, SOL_SOCKET, SO_ACCEPTFILTER, (char*) &af, sizeof(af) );
+    	struct accept_filter_arg af;
+    	(void) bzero( &af, sizeof(af) );
+    	(void) strcpy( af.af_name, ACCEPT_FILTER_NAME );
+    	(void) setsockopt(
+		listen_fd, SOL_SOCKET, SO_ACCEPTFILTER, (char*) &af, sizeof(af) );
     }
 #endif /* SO_ACCEPTFILTER */
 
     return listen_fd;
-    }
+}
 
 
-void
-httpd_set_logfp( httpd_server* hs, FILE* logfp )
-    {
+void httpd_set_logfp( httpd_server* hs, FILE* logfp )
+{
     if ( hs->logfp != (FILE*) 0 )
-	(void) fclose( hs->logfp );
+	{
+		(void) fclose( hs->logfp );
+	}
     hs->logfp = logfp;
-    }
+}
 
 
-void
-httpd_terminate( httpd_server* hs )
-    {
+void httpd_terminate( httpd_server* hs )
+{
     httpd_unlisten( hs );
     if ( hs->logfp != (FILE*) 0 )
-	(void) fclose( hs->logfp );
+	{
+		(void) fclose( hs->logfp );
+	}
     free_httpd_server( hs );
-    }
+}
 
 
-void
-httpd_unlisten( httpd_server* hs )
-    {
+void httpd_unlisten( httpd_server* hs )
+{
     if ( hs->listen4_fd != -1 )
 	{
-	(void) close( hs->listen4_fd );
-	hs->listen4_fd = -1;
+		(void) close( hs->listen4_fd );
+		hs->listen4_fd = -1;
 	}
     if ( hs->listen6_fd != -1 )
 	{
-	(void) close( hs->listen6_fd );
-	hs->listen6_fd = -1;
+		(void) close( hs->listen6_fd );
+		hs->listen6_fd = -1;
 	}
-    }
+}
 
 
 /* Conditional macro to allow two alternate forms for use in the built-in
@@ -571,68 +584,69 @@ char* httpd_err503form =
 
 
 /* Append a string to the buffer waiting to be sent as response. */
-static void
-add_response( httpd_conn* hc, char* str )
-    {
+static void add_response( httpd_conn* hc, char* str )
+{
     size_t len;
 
     len = strlen( str );
     httpd_realloc_str( &hc->response, &hc->maxresponse, hc->responselen + len );
     (void) memmove( &(hc->response[hc->responselen]), str, len );
     hc->responselen += len;
-    }
+}
 
 /* Send the buffered response. */
-void
-httpd_write_response( httpd_conn* hc )
-    {
+void httpd_write_response( httpd_conn* hc )
+{
     /* If we are in a sub-process, turn off no-delay mode. */
     if ( sub_process )
-	httpd_clear_ndelay( hc->conn_fd );
+	{
+		httpd_clear_ndelay( hc->conn_fd );
+	}
     /* Send the response, if necessary. */
     if ( hc->responselen > 0 )
 	{
-	(void) httpd_write_fully( hc->conn_fd, hc->response, hc->responselen );
-	hc->responselen = 0;
+		(void) httpd_write_fully( hc->conn_fd, hc->response, hc->responselen );
+		hc->responselen = 0;
 	}
-    }
+}
 
 
 /* Set no-delay / non-blocking mode on a socket. */
-void
-httpd_set_ndelay( int fd )
-    {
+void httpd_set_ndelay( int fd )
+{
     int flags, newflags;
 
     flags = fcntl( fd, F_GETFL, 0 );
     if ( flags != -1 )
 	{
-	newflags = flags | (int) O_NDELAY;
-	if ( newflags != flags )
-	    (void) fcntl( fd, F_SETFL, newflags );
+		newflags = flags | (int) O_NDELAY;
+		if ( newflags != flags )
+	    {
+			(void) fcntl( fd, F_SETFL, newflags );
+		}
 	}
-    }
+}
 
 
 /* Clear no-delay / non-blocking mode on a socket. */
-void
-httpd_clear_ndelay( int fd )
-    {
+void httpd_clear_ndelay( int fd )
+{
     int flags, newflags;
 
     flags = fcntl( fd, F_GETFL, 0 );
     if ( flags != -1 )
 	{
-	newflags = flags & ~ (int) O_NDELAY;
-	if ( newflags != flags )
-	    (void) fcntl( fd, F_SETFL, newflags );
+		newflags = flags & ~ (int) O_NDELAY;
+		if ( newflags != flags )
+	    {
+			(void) fcntl( fd, F_SETFL, newflags );
+		}
 	}
-    }
+}
 
 
-static void
-send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extraheads, char* type, off_t length, time_t mod )
-    {
+static void send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extraheads, char* type, off_t length, time_t mod )
+{
     time_t now, expires;
     const char* rfc1123fmt = "%a, %d %b %Y %H:%M:%S GMT";
     char nowbuf[100];
@@ -647,84 +661,74 @@ send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extra
     hc->bytes_to_send = length;
     if ( hc->mime_flag )
 	{
-	if ( status == 200 && hc->got_range &&
+		if ( status == 200 && hc->got_range &&
 	     ( hc->last_byte_index >= hc->first_byte_index ) &&
 	     ( ( hc->last_byte_index != length - 1 ) ||
 	       ( hc->first_byte_index != 0 ) ) &&
 	     ( hc->range_if == (time_t) -1 ||
 	       hc->range_if == hc->sb.st_mtime ) )
 	    {
-	    partial_content = 1;
-	    hc->status = status = 206;
-	    title = ok206title;
+	    	partial_content = 1;
+	    	hc->status = status = 206;
+	    	title = ok206title;
 	    }
-	else
+		else
 	    {
-	    partial_content = 0;
-	    hc->got_range = 0;
+	    	partial_content = 0;
+	    	hc->got_range = 0;
 	    }
 
-	now = time( (time_t*) 0 );
-	if ( mod == (time_t) 0 )
-	    mod = now;
-	(void) strftime( nowbuf, sizeof(nowbuf), rfc1123fmt, gmtime( &now ) );
-	(void) strftime( modbuf, sizeof(modbuf), rfc1123fmt, gmtime( &mod ) );
-	(void) my_snprintf(
-	    fixed_type, sizeof(fixed_type), type, hc->hs->charset );
-	(void) my_snprintf( buf, sizeof(buf),
-	    "%.20s %d %s\015\012Server: %s\015\012Content-Type: %s\015\012Date: %s\015\012Last-Modified: %s\015\012Accept-Ranges: bytes\015\012Connection: close\015\012",
-	    hc->protocol, status, title, EXPOSED_SERVER_SOFTWARE, fixed_type,
-	    nowbuf, modbuf );
-	add_response( hc, buf );
-	s100 = status / 100;
-	if ( s100 != 2 && s100 != 3 )
+		now = time( (time_t*) 0 );
+		if ( mod == (time_t) 0 )
 	    {
-	    (void) my_snprintf( buf, sizeof(buf),
-		"Cache-Control: no-cache,no-store\015\012" );
-	    add_response( hc, buf );
-	    }
-	if ( encodings[0] != '\0' )
+			mod = now;
+		}
+		(void) strftime( nowbuf, sizeof(nowbuf), rfc1123fmt, gmtime( &now ) );
+		(void) strftime( modbuf, sizeof(modbuf), rfc1123fmt, gmtime( &mod ) );
+		(void) my_snprintf(fixed_type, sizeof(fixed_type), type, hc->hs->charset );
+		(void) my_snprintf( buf, sizeof(buf),"%.20s %d %s\015\012Server: %s\015\012Content-Type: %s\015\012Date: %s\015\012Last-Modified: %s\015\012Accept-Ranges: bytes\015\012Connection: close\015\012",hc->protocol, status, title, EXPOSED_SERVER_SOFTWARE, fixed_type,nowbuf, modbuf );
+		add_response( hc, buf );
+		s100 = status / 100;
+		if ( s100 != 2 && s100 != 3 )
 	    {
-	    (void) my_snprintf( buf, sizeof(buf),
-		"Content-Encoding: %s\015\012", encodings );
-	    add_response( hc, buf );
+	    	(void) my_snprintf( buf, sizeof(buf),
+			"Cache-Control: no-cache,no-store\015\012" );
+	    	add_response( hc, buf );
 	    }
-	if ( partial_content )
+		if ( encodings[0] != '\0' )
 	    {
-	    (void) my_snprintf( buf, sizeof(buf),
-		"Content-Range: bytes %lld-%lld/%lld\015\012Content-Length: %lld\015\012",
-		(long long) hc->first_byte_index,
-		(long long) hc->last_byte_index,
-		(long long) length,
-		(long long) ( hc->last_byte_index - hc->first_byte_index + 1 ) );
-	    add_response( hc, buf );
+	    	(void) my_snprintf( buf, sizeof(buf),
+			"Content-Encoding: %s\015\012", encodings );
+	    	add_response( hc, buf );
 	    }
-	else if ( length >= 0 )
+		if ( partial_content )
 	    {
-	    (void) my_snprintf( buf, sizeof(buf),
-		"Content-Length: %lld\015\012", (long long) length );
-	    add_response( hc, buf );
+	    	(void) my_snprintf( buf, sizeof(buf),"Content-Range: bytes %lld-%lld/%lld\015\012Content-Length: %lld\015\012",(long long) hc->first_byte_index,(long long) hc->last_byte_index,(long long) length,(long long) ( hc->last_byte_index - hc->first_byte_index + 1 ) );
+	    	add_response( hc, buf );
 	    }
-	if ( hc->hs->p3p[0] != '\0' )
+		else if ( length >= 0 )
 	    {
-	    (void) my_snprintf( buf, sizeof(buf), "P3P: %s\015\012", hc->hs->p3p );
-	    add_response( hc, buf );
+	    	(void) my_snprintf( buf, sizeof(buf),"Content-Length: %lld\015\012", (long long) length );add_response( hc, buf );
 	    }
-	if ( hc->hs->max_age >= 0 )
+		if ( hc->hs->p3p[0] != '\0' )
 	    {
-	    expires = now + hc->hs->max_age;
-	    (void) strftime(
-		expbuf, sizeof(expbuf), rfc1123fmt, gmtime( &expires ) );
-	    (void) my_snprintf( buf, sizeof(buf),
-		"Cache-Control: max-age=%d\015\012Expires: %s\015\012",
-		hc->hs->max_age, expbuf );
-	    add_response( hc, buf );
+	    	(void) my_snprintf( buf, sizeof(buf), "P3P: %s\015\012", hc->hs->p3p );
+	    	add_response( hc, buf );
 	    }
-	if ( extraheads[0] != '\0' )
-	    add_response( hc, extraheads );
-	add_response( hc, "\015\012" );
+		if ( hc->hs->max_age >= 0 )
+	    {
+	    	expires = now + hc->hs->max_age;
+	    	(void) strftime(expbuf, sizeof(expbuf), rfc1123fmt, gmtime( &expires ) );
+	    	(void) my_snprintf( buf, sizeof(buf),"Cache-Control: max-age=%d\015\012Expires: %s\015\012",hc->hs->max_age, expbuf );
+			add_response( hc, buf );
+	    }
+		if ( extraheads[0] != '\0' )
+	    {
+			add_response( hc, extraheads );
+		}
+		add_response( hc, "\015\012" );
 	}
-    }
+}
 
 
 static int str_alloc_count = 0;
@@ -758,14 +762,11 @@ void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
 }
 
 
-static void
-send_response( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
-    {
+static void send_response( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
+{
     char defanged_arg[1000], buf[2000];
 
-    send_mime(
-	hc, status, title, "", extraheads, "text/html; charset=%s", (off_t) -1,
-	(time_t) 0 );
+    send_mime(hc, status, title, "", extraheads, "text/html; charset=%s", (off_t) -1,(time_t) 0 );
     (void) my_snprintf( buf, sizeof(buf), "\
 <!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n\
 \n\
@@ -786,19 +787,20 @@ send_response( httpd_conn* hc, int status, char* title, char* extraheads, char* 
     add_response( hc, buf );
     if ( match( "**MSIE**", hc->useragent ) )
 	{
-	int n;
-	add_response( hc, "<!--\n" );
-	for ( n = 0; n < 6; ++n )
-	    add_response( hc, "Padding so that MSIE deigns to show this error instead of its own canned one.\n");
-	add_response( hc, "-->\n" );
+		int n;
+		add_response( hc, "<!--\n" );
+		for ( n = 0; n < 6; ++n )
+	    {
+			add_response( hc, "Padding so that MSIE deigns to show this error instead of its own canned one.\n");
+		}
+		add_response( hc, "-->\n" );
 	}
     send_response_tail( hc );
-    }
+}
 
 
-static void
-send_response_tail( httpd_conn* hc )
-    {
+static void send_response_tail( httpd_conn* hc )
+{
     char buf[1000];
 
     (void) my_snprintf( buf, sizeof(buf), "\
@@ -811,12 +813,11 @@ send_response_tail( httpd_conn* hc )
 </html>\n",
 	SERVER_ADDRESS, EXPOSED_SERVER_SOFTWARE );
     add_response( hc, buf );
-    }
+}
 
 
-static void
-defang( char* str, char* dfstr, int dfsize )
-    {
+static void defang( char* str, char* dfstr, int dfsize )
+{
     char* cp1;
     char* cp2;
 
@@ -824,31 +825,30 @@ defang( char* str, char* dfstr, int dfsize )
 	  *cp1 != '\0' && cp2 - dfstr < dfsize - 5;
 	  ++cp1, ++cp2 )
 	{
-	switch ( *cp1 )
+		switch ( *cp1 )
 	    {
-	    case '<':
-	    *cp2++ = '&';
-	    *cp2++ = 'l';
-	    *cp2++ = 't';
-	    *cp2 = ';';
-	    break;
-	    case '>':
-	    *cp2++ = '&';
-	    *cp2++ = 'g';
-	    *cp2++ = 't';
-	    *cp2 = ';';
-	    break;
-	    default:
-	    *cp2 = *cp1;
-	    break;
+	   		case '<':
+	    		*cp2++ = '&';
+	    		*cp2++ = 'l';
+	    		*cp2++ = 't';
+	    		*cp2 = ';';
+	    		break;
+	    	case '>':
+	    		*cp2++ = '&';
+	    		*cp2++ = 'g';
+	    		*cp2++ = 't';
+	    		*cp2 = ';';
+	    		break;
+	    	default:
+	    		*cp2 = *cp1;
+	    		break;
 	    }
 	}
     *cp2 = '\0';
-    }
+}
 
 
-void
-httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
+void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
     {
 #ifdef ERR_DIR
 
@@ -857,17 +857,20 @@ httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char*
     /* Try virtual host error page. */
     if ( hc->hs->vhost && hc->hostdir[0] != '\0' )
 	{
-	(void) my_snprintf( filename, sizeof(filename),
-	    "%s/%s/err%d.html", hc->hostdir, ERR_DIR, status );
-	if ( send_err_file( hc, status, title, extraheads, filename ) )
-	    return;
+		(void) my_snprintf( filename, sizeof(filename),"%s/%s/err%d.html", hc->hostdir, ERR_DIR, status );
+		if ( send_err_file( hc, status, title, extraheads, filename ) )
+	    {
+			return;
+		}
 	}
 
     /* Try server-wide error page. */
     (void) my_snprintf( filename, sizeof(filename),
 	"%s/err%d.html", ERR_DIR, status );
     if ( send_err_file( hc, status, title, extraheads, filename ) )
-	return;
+	{
+		return;
+	}
 
     /* Fall back on built-in error page. */
     send_response( hc, status, title, extraheads, form, arg );
@@ -881,26 +884,29 @@ httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char*
 
 
 #ifdef ERR_DIR
-static int
-send_err_file( httpd_conn* hc, int status, char* title, char* extraheads, char* filename )
-    {
+static int send_err_file( httpd_conn* hc, int status, char* title, char* extraheads, char* filename )
+{
     FILE* fp;
     char buf[1000];
     size_t r;
 
     fp = fopen( filename, "r" );
     if ( fp == (FILE*) 0 )
-	return 0;
+	{
+		return 0;
+	}
     send_mime(
 	hc, status, title, "", extraheads, "text/html; charset=%s", (off_t) -1,
 	(time_t) 0 );
     for (;;)
 	{
-	r = fread( buf, 1, sizeof(buf) - 1, fp );
-	if ( r == 0 )
-	    break;
-	buf[r] = '\0';
-	add_response( hc, buf );
+		r = fread( buf, 1, sizeof(buf) - 1, fp );
+		if ( r == 0 )
+	    {
+			break;
+		}
+		buf[r] = '\0';
+		add_response( hc, buf );
 	}
     (void) fclose( fp );
 
@@ -909,15 +915,14 @@ send_err_file( httpd_conn* hc, int status, char* title, char* extraheads, char* 
 #endif /* ERR_APPEND_SERVER_INFO */
 
     return 1;
-    }
+}
 #endif /* ERR_DIR */
 
 
 #ifdef AUTH_FILE
 
-static void
-send_authenticate( httpd_conn* hc, char* realm )
-    {
+static void send_authenticate( httpd_conn* hc, char* realm )
+{
     static char* header;
     static size_t maxheader = 0;
     static char headstr[] = "WWW-Authenticate: Basic realm=\"";
@@ -930,8 +935,10 @@ send_authenticate( httpd_conn* hc, char* realm )
     ** so we need to do a lingering close.
     */
     if ( hc->method == METHOD_POST )
-	hc->should_linger = 1;
-    }
+	{
+		hc->should_linger = 1;
+	}
+}
 
 
 /* Base-64 decoding.  This represents binary data as printable ASCII
