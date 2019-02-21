@@ -1601,6 +1601,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    	*/
 			/**在系统日志中记录错误信息执行计时器运行程序*/
 	    	syslog( LOG_WARNING, "too many connections!" );
+#ifdef JI_DEBUG
+			printf("http connect return maybe in this for to many\n");
+#endif
 	    	tmr_run( tvP );
 	    	return 0;
 	    }
@@ -1610,7 +1613,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    {
 	    	syslog( LOG_CRIT, "the connects free list is messed up" );
 #ifdef JI_DEBUG
-			printf("http connect return maybe in this \n");
+			printf("http connect return maybe in this for first_free_connect\n");
 #endif
 	    	exit( 1 );
 	    }
@@ -1620,13 +1623,16 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		if ( c->hc == (httpd_conn*) 0 )
 	    {
 #ifdef JI_DEBUG
-			printf("http connect is no initialized");
+			printf("http connect is no initialized\n");
 #endif 			
 	    	c->hc = NEW( httpd_conn, 1 );
 			/**对初始化http连接失败进行处理*/
 	    	if ( c->hc == (httpd_conn*) 0 )
 			{
 				syslog( LOG_CRIT, "out of memory allocating an httpd_conn" );
+#ifdef JI_DEBUG
+				printf("http connect return maybe in this for mallco error\n");
+#endif
 				exit( 1 );
 			}
 			/**设置http初始化标志为未初始化*/
@@ -1643,10 +1649,16 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	    	*/
 	    	case GC_FAIL:
 	    		tmr_run( tvP );
+#ifdef JI_DEBUG
+				printf("http connect return maybe in this for GC_FAIL\n");
+#endif
 	    		return 0;
 
 	    	/* No more connections to accept for now. */
 	    	case GC_NO_MORE:
+#ifdef JI_DEBUG
+				printf("http connect return maybe in this for GC_NO_MORE\n");
+#endif
 	    		return 1;
 	    }
 		/**设置连接状态*/
