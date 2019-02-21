@@ -1,6 +1,6 @@
 /* timers.c - simple timer routines
 **
-** Copyright � 1995,1998,2000,2014 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995,1998,2000,2014 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -57,9 +57,8 @@ hash( Timer* t )
     }
 
 
-static void
-l_add( Timer* t )
-    {
+static void l_add( Timer* t )
+{
     int h = t->hash;
     Timer* t2;
     Timer* t2prev;
@@ -67,47 +66,46 @@ l_add( Timer* t )
     t2 = timers[h];
     if ( t2 == (Timer*) 0 )
 	{
-	/* The list is empty. */
-	timers[h] = t;
-	t->prev = t->next = (Timer*) 0;
+		/* The list is empty. */
+		timers[h] = t;
+		t->prev = t->next = (Timer*) 0;
 	}
     else
 	{
-	if ( t->time.tv_sec < t2->time.tv_sec ||
+		if ( t->time.tv_sec < t2->time.tv_sec ||
 	     ( t->time.tv_sec == t2->time.tv_sec &&
 	       t->time.tv_usec <= t2->time.tv_usec ) )
 	    {
-	    /* The new timer goes at the head of the list. */
-	    timers[h] = t;
-	    t->prev = (Timer*) 0;
-	    t->next = t2;
-	    t2->prev = t;
+	    	/* The new timer goes at the head of the list. */
+	    	timers[h] = t;
+	    	t->prev = (Timer*) 0;
+	    	t->next = t2;
+	    	t2->prev = t;
 	    }
-	else
+		else
 	    {
-	    /* Walk the list to find the insertion point. */
-	    for ( t2prev = t2, t2 = t2->next; t2 != (Timer*) 0;
-		  t2prev = t2, t2 = t2->next )
-		{
-		if ( t->time.tv_sec < t2->time.tv_sec ||
-		     ( t->time.tv_sec == t2->time.tv_sec &&
-		       t->time.tv_usec <= t2->time.tv_usec ) )
-		    {
-		    /* Found it. */
-		    t2prev->next = t;
-		    t->prev = t2prev;
-		    t->next = t2;
-		    t2->prev = t;
-		    return;
-		    }
-		}
-	    /* Oops, got to the end of the list.  Add to tail. */
-	    t2prev->next = t;
-	    t->prev = t2prev;
-	    t->next = (Timer*) 0;
+	    	/* Walk the list to find the insertion point. */
+	    	for ( t2prev = t2, t2 = t2->next; t2 != (Timer*) 0;t2prev = t2, t2 = t2->next )
+			{
+				if ( t->time.tv_sec < t2->time.tv_sec ||
+		     		( t->time.tv_sec == t2->time.tv_sec &&
+		       		t->time.tv_usec <= t2->time.tv_usec ) )
+		    	{
+		    		/* Found it. */
+		    		t2prev->next = t;
+		    		t->prev = t2prev;
+		    		t->next = t2;
+		    		t2->prev = t;
+		    		return;
+		    	}
+			}
+	    	/* Oops, got to the end of the list.  Add to tail. */
+	    	t2prev->next = t;
+	    	t->prev = t2prev;
+	    	t->next = (Timer*) 0;
 	    }
 	}
-    }
+}
 
 
 static void
@@ -147,50 +145,66 @@ tmr_init( void )
     alloc_count = active_count = free_count = 0;
     }
 
-
-Timer*
-tmr_create(
+/**计时器创建
+ * nowP 计时器时间
+ * timer_proc 计时器处理函数
+ * client_data 计时器处理函数参数
+ * msecs 超时时间单位为毫秒
+ * periodic 是否持续发生标记
+*/
+Timer* tmr_create(
     struct timeval* nowP, TimerProc* timer_proc, ClientData client_data,
     long msecs, int periodic )
-    {
+{
     Timer* t;
-
+	/**对于已经给free_timers分配内存空间处理*/
     if ( free_timers != (Timer*) 0 )
 	{
-	t = free_timers;
-	free_timers = t->next;
-	--free_count;
+		t = free_timers;
+		free_timers = t->next;
+		--free_count;
 	}
+	/**对于未给free_timers分配内存空间处理*/
     else
 	{
-	t = (Timer*) malloc( sizeof(Timer) );
-	if ( t == (Timer*) 0 )
-	    return (Timer*) 0;
-	++alloc_count;
+		t = (Timer*) malloc( sizeof(Timer) );
+		/**对于*/
+		if ( t == (Timer*) 0 )
+	    {
+			return (Timer*) 0;
+		}
+		++alloc_count;
 	}
 
     t->timer_proc = timer_proc;
     t->client_data = client_data;
     t->msecs = msecs;
     t->periodic = periodic;
+	/**根据传入的时间是否为0进行处理不为0使用传入的时间，为0则使用当前的时间*/
     if ( nowP != (struct timeval*) 0 )
-	t->time = *nowP;
+	{
+		t->time = *nowP;
+	}
     else
-	(void) gettimeofday( &t->time, (struct timezone*) 0 );
+	{
+		(void) gettimeofday( &t->time, (struct timezone*) 0 );
+	}
+	/**设置时间*/
     t->time.tv_sec += msecs / 1000L;
     t->time.tv_usec += ( msecs % 1000L ) * 1000L;
     if ( t->time.tv_usec >= 1000000L )
 	{
-	t->time.tv_sec += t->time.tv_usec / 1000000L;
-	t->time.tv_usec %= 1000000L;
+		t->time.tv_sec += t->time.tv_usec / 1000000L;
+		t->time.tv_usec %= 1000000L;
 	}
     t->hash = hash( t );
     /* Add the new timer to the proper active list. */
+	/**将时间t加载到计时器队列中*/
     l_add( t );
     ++active_count;
 
     return t;
-    }
+}
 
 
 struct timeval*

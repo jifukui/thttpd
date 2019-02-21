@@ -1,6 +1,6 @@
 /* timers.h - header file for timers package
 **
-** Copyright � 1995,1998,1999,2000,2014 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995,1998,1999,2000,2014 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,15 @@ extern ClientData JunkClientData;	/* for use when you don't care */
 typedef void TimerProc( ClientData client_data, struct timeval* nowP );
 
 /* The Timer struct. */
+/**计时器结构体
+ * timer_proc 处理函数
+ * client_data 处理函数参数
+ * msecs 超时时间单位为毫秒
+ * periodic 是否一直使用标记位
+ * time
+ * prev 结构体的上一个
+ * next 结构体的下一个
+*/
 typedef struct TimerStruct {
     TimerProc* timer_proc;
     ClientData client_data;
@@ -62,7 +71,7 @@ typedef struct TimerStruct {
     struct TimerStruct* prev;
     struct TimerStruct* next;
     int hash;
-    } Timer;
+} Timer;
 
 /* Initialize the timer package. */
 void tmr_init( void );

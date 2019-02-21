@@ -323,6 +323,7 @@ static void handle_alrm( int sig )
     (void) signal( SIGALRM, handle_alrm );
 #endif /* ! HAVE_SIGSET */
     /* Set up alarm again. */
+	/**设置闹钟时间*/
     (void) alarm( OCCASIONAL_TIME * 3 );
 
     /* Restore previous errno. */
@@ -628,15 +629,16 @@ int main( int argc, char** argv )
 	}
 
     /* Set up to catch signals. */
+	/**信号事件处理函数*/
 #ifdef HAVE_SIGSET
-    (void) sigset( SIGTERM, handle_term );
-    (void) sigset( SIGINT, handle_term );
-    (void) sigset( SIGCHLD, handle_chld );
-    (void) sigset( SIGPIPE, SIG_IGN );          /* get EPIPE instead */
-    (void) sigset( SIGHUP, handle_hup );
-    (void) sigset( SIGUSR1, handle_usr1 );
-    (void) sigset( SIGUSR2, handle_usr2 );
-    (void) sigset( SIGALRM, handle_alrm );
+    (void) sigset( SIGTERM, handle_term );		//系统提供给普通用户，用于终止一个进程
+    (void) sigset( SIGINT, handle_term );		//对于用户输出Ctrl+C键的处理
+    (void) sigset( SIGCHLD, handle_chld );		//子进程结束
+    (void) sigset( SIGPIPE, SIG_IGN );          /* get EPIPE instead 对不存在的管道写数据时产生 忽略此信号*/
+    (void) sigset( SIGHUP, handle_hup );		//终端关闭时的处理函数
+    (void) sigset( SIGUSR1, handle_usr1 );		//用户定义信号处理1
+    (void) sigset( SIGUSR2, handle_usr2 );		//用户定义信号处理2
+    (void) sigset( SIGALRM, handle_alrm );		//时钟信号处理函数
 #else /* HAVE_SIGSET */
     (void) signal( SIGTERM, handle_term );
     (void) signal( SIGINT, handle_term );
@@ -693,6 +695,7 @@ int main( int argc, char** argv )
 	}
 #ifdef STATS_TIME
     /* Set up the stats timer. */
+	/**创建计时器*/
     if ( tmr_create( (struct timeval*) 0, show_stats, JunkClientData, STATS_TIME * 1000L, 1 ) == (Timer*) 0 )
 	{
 		syslog( LOG_CRIT, "tmr_create(show_stats) failed" );
@@ -785,7 +788,7 @@ int main( int argc, char** argv )
 	    }
 
 		/* Do the fd watch. */
-		/**获取是否有程序的超时*/
+		/**获取是否有程序的超时，正数表示的是准备好的文件描述符的数量*/
 		num_ready = fdwatch( tmr_mstimeout( &tv ) );
 		if ( num_ready < 0 )
 	    {
@@ -804,10 +807,13 @@ int main( int argc, char** argv )
 	    	tmr_run( &tv );
 	    	continue;
 	    }
-
+		/**对于可用的文件描述符的值为正数的处理*/
 		/**对于IP地址为IPv6进行处理*/
 		if ( hs != (httpd_server*) 0 && hs->listen6_fd != -1 &&fdwatch_check_fd( hs->listen6_fd ) )
 	    {
+#ifdef JI_DEBUG
+			printf("The ipv6 fd is %d\n",hs->listen6_fd);
+#endif 
 	    	if ( handle_newconnect( &tv, hs->listen6_fd ) )
 			/* Go around the loop and do another fdwatch, rather than
 			** dropping through and processing existing connections.
@@ -820,6 +826,9 @@ int main( int argc, char** argv )
 		/**对IP地址为IPV4的处理*/
 		if ( hs != (httpd_server*) 0 && hs->listen4_fd != -1 &&fdwatch_check_fd( hs->listen4_fd ) )
 	    {
+#ifdef JI_DEBUG
+			printf("The ipv4 fd is %d\n",hs->listen4_fd);
+#endif 
 	    	if ( handle_newconnect( &tv, hs->listen4_fd ) )
 			/* Go around the loop and do another fdwatch, rather than
 			** dropping through and processing existing connections.
@@ -847,9 +856,22 @@ int main( int argc, char** argv )
 			{
 				switch ( c->conn_state )
 		    	{
-		    		case CNST_READING: handle_read( c, &tv ); break;
-		    		case CNST_SENDING: handle_send( c, &tv ); break;
-		    		case CNST_LINGERING: handle_linger( c, &tv ); break;
+		    		case CNST_READING: 
+					{
+						/***/
+						handle_read( c, &tv ); 
+						break;
+					}
+		    		case CNST_SENDING: 
+					{
+						handle_send( c, &tv ); 
+						break;
+					}
+		    		case CNST_LINGERING: 
+					{
+						handle_linger( c, &tv ); 
+						break;
+					}
 		    	}
 			}
 	    }
@@ -1587,6 +1609,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		if ( first_free_connect == -1 || connects[first_free_connect].conn_state != CNST_FREE )
 	    {
 	    	syslog( LOG_CRIT, "the connects free list is messed up" );
+#ifdef JI_DEBUG
+			printf("http connect return maybe in this \n");
+#endif
 	    	exit( 1 );
 	    }
 		c = &connects[first_free_connect];
@@ -1594,6 +1619,9 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		/**对http连接没有初始化进行初始化操作*/
 		if ( c->hc == (httpd_conn*) 0 )
 	    {
+#ifdef JI_DEBUG
+			printf("http connect is no initialized");
+#endif 			
 	    	c->hc = NEW( httpd_conn, 1 );
 			/**对初始化http连接失败进行处理*/
 	    	if ( c->hc == (httpd_conn*) 0 )
@@ -1640,7 +1668,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		httpd_set_ndelay( c->hc->conn_fd );
 		/**向文件队列中添加需要此文件描述符*/
 		fdwatch_add_fd( c->hc->conn_fd, c, FDW_READ );
-
+		/**更新已经连接的http数量*/
 		++stats_connections;
 		if ( num_connects > stats_simultaneous )
 	    {
