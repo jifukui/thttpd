@@ -1765,14 +1765,16 @@ static void handle_read( connecttab* c, struct timeval* tvP )
     switch ( httpd_got_request( hc ) )
 	{
 		case GR_NO_REQUEST:
-#ifdef JI_DEBUG
-			printf("The buf is %s \n",hc->read_buf[hc->read_idx-sz]);
-#endif
+
 			return;
 		case GR_BAD_REQUEST:
 			httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 			finish_connection( c, tvP );
 			return;
+		case GR_GOT_REQUEST:
+#ifdef JI_DEBUG
+			printf("The buf is %s \n",hc->read_buf[hc->read_idx-sz]);
+#endif
 	}
 
     /* Yes.  Try parsing and resolving it. */
