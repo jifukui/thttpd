@@ -242,7 +242,7 @@ long tmr_mstimeout( struct timeval* nowP )
     for ( h = 0; h < HASH_SIZE; ++h )
 	{
 	t = timers[h];
-	i	f ( t != (Timer*) 0 )
+		if ( t != (Timer*) 0 )
 	    {
 	    	m = ( t->time.tv_sec - nowP->tv_sec ) * 1000L +
 			( t->time.tv_usec - nowP->tv_usec ) / 1000L;
