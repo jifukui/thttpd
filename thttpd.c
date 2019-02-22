@@ -1700,7 +1700,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
     ClientData client_data;
     httpd_conn* hc = c->hc;
 #ifdef JI_DEBUG
-		char ji_debugbuf[100];
+		char ji_debugbuf[600];
 		printf("connect fd is %d\n",hc->conn_fd);
 		printf("the read size is %d\n",hc->read_size);
 #endif
@@ -1774,7 +1774,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 			return;
 		case GR_GOT_REQUEST:
 #ifdef JI_DEBUG
-			strcpy(ji_debugbuf,hc->read_buf[hc->checked_idx],sz);
+			strncpy(ji_debugbuf,hc->read_buf[hc->checked_idx],sz);
 			printf("The buf is %s\n",ji_debugbuf);
 #endif
 	}
