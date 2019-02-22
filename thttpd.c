@@ -847,6 +847,7 @@ int main( int argc, char** argv )
 				continue;
 			}
 	    	hc = c->hc;
+			/**对于文件描述符的值为非法的文件描述符的处理*/
 	    	if ( ! fdwatch_check_fd( hc->conn_fd ) )
 			/* Something went wrong. */
 			{
@@ -858,7 +859,7 @@ int main( int argc, char** argv )
 		    	{
 		    		case CNST_READING: 
 					{
-						/***/
+						/**对于连接状态为读数据时的处理*/
 						handle_read( c, &tv ); 
 						break;
 					}
@@ -1692,7 +1693,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	}
 }
 
-/***/
+/**读客户数据*/
 static void handle_read( connecttab* c, struct timeval* tvP )
 {
     int sz;
@@ -1700,22 +1701,22 @@ static void handle_read( connecttab* c, struct timeval* tvP )
     httpd_conn* hc = c->hc;
 
     /* Is there room in our buffer to read more bytes? */
+	/**对于读取的文件的数量大于总的文件的大小的处理*/
     if ( hc->read_idx >= hc->read_size )
 	{
-	if ( hc->read_size > 5000 )
+		/**对于文件的打下大于5000字符时的处理*/
+		if ( hc->read_size > 5000 )
 	    {
-	    httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
-	    finish_connection( c, tvP );
-	    return;
+	    	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
+	    	finish_connection( c, tvP );
+	    	return;
 	    }
-	httpd_realloc_str(
-	    &hc->read_buf, &hc->read_size, hc->read_size + 1000 );
+		httpd_realloc_str(&hc->read_buf, &hc->read_size, hc->read_size + 1000 );
 	}
 
     /* Read some more bytes. */
-    sz = read(
-	hc->conn_fd, &(hc->read_buf[hc->read_idx]),
-	hc->read_size - hc->read_idx );
+	/**服务器从客户端读取数据，并将数据存储至read_buf中*/
+    sz = read(hc->conn_fd, &(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx );
     if ( sz == 0 )
 	{
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
@@ -2140,11 +2141,11 @@ static void finish_connection( connecttab* c, struct timeval* tvP )
     clear_connection( c, tvP );
 }
 
-
+/**清除连接*/
 static void clear_connection( connecttab* c, struct timeval* tvP )
 {
     ClientData client_data;
-
+	/**对于连接的唤醒计时器不为野指针，清除此计时器同时设置指针的值为0*/
     if ( c->wakeup_timer != (Timer*) 0 )
 	{
 		tmr_cancel( c->wakeup_timer );
@@ -2162,6 +2163,7 @@ static void clear_connection( connecttab* c, struct timeval* tvP )
     ** circumstances that make a lingering close necessary.  If the flag
     ** isn't set we do the real close now.
     */
+   /**对于连接状态为错误时的处理*/
     if ( c->conn_state == CNST_LINGERING )
 	{
 		/* If we were already lingering, shut down for real. */
@@ -2169,12 +2171,17 @@ static void clear_connection( connecttab* c, struct timeval* tvP )
 		c->linger_timer = (Timer*) 0;
 		c->hc->should_linger = 0;
 	}
+	/***/
     if ( c->hc->should_linger )
 	{
+		/**对于连接状态不为暂停的处理
+		 * 从set集合中删除此文件描述符
+		*/
 		if ( c->conn_state != CNST_PAUSING )
 	    {
 			fdwatch_del_fd( c->hc->conn_fd );
 		}
+		/**设置连接状态为CNST_LINGERING*/
 		c->conn_state = CNST_LINGERING;
 		shutdown( c->hc->conn_fd, SHUT_WR );
 		fdwatch_add_fd( c->hc->conn_fd, c, FDW_READ );

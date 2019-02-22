@@ -42,10 +42,9 @@ static int alloc_count, active_count, free_count;
 ClientData JunkClientData;
 
 
-
-static unsigned int
-hash( Timer* t )
-    {
+/**返回对时间处理的hash值*/
+static unsigned int hash( Timer* t )
+{
     /* We can hash on the trigger time, even though it can change over
     ** the life of a timer via either the periodic bit or the tmr_reset()
     ** call.  This is because both of those guys call l_resort(), which
@@ -54,7 +53,7 @@ hash( Timer* t )
     return (
 	(unsigned int) t->time.tv_sec ^
 	(unsigned int) t->time.tv_usec ) % HASH_SIZE;
-    }
+}
 
 
 static void l_add( Timer* t )
@@ -108,42 +107,47 @@ static void l_add( Timer* t )
 }
 
 
-static void
-l_remove( Timer* t )
-    {
+static void l_remove( Timer* t )
+{
     int h = t->hash;
 
     if ( t->prev == (Timer*) 0 )
-	timers[h] = t->next;
+	{
+		timers[h] = t->next;
+	}
     else
-	t->prev->next = t->next;
+	{
+		t->prev->next = t->next;
+	}
     if ( t->next != (Timer*) 0 )
-	t->next->prev = t->prev;
-    }
+	{
+		t->next->prev = t->prev;
+	}
+}
 
 
-static void
-l_resort( Timer* t )
-    {
+static void l_resort( Timer* t )
+{
     /* Remove the timer from its old list. */
     l_remove( t );
     /* Recompute the hash. */
     t->hash = hash( t );
     /* And add it back in to its new list, sorted correctly. */
     l_add( t );
-    }
+}
 
 
-void
-tmr_init( void )
-    {
+void tmr_init( void )
+{
     int h;
 
     for ( h = 0; h < HASH_SIZE; ++h )
-	timers[h] = (Timer*) 0;
+	{
+		timers[h] = (Timer*) 0;
+	}
     free_timers = (Timer*) 0;
     alloc_count = active_count = free_count = 0;
-    }
+}
 
 /**计时器创建
  * nowP 计时器时间
@@ -207,24 +211,24 @@ Timer* tmr_create(
 }
 
 
-struct timeval*
-tmr_timeout( struct timeval* nowP )
-    {
+struct timeval* tmr_timeout( struct timeval* nowP )
+{
     long msecs;
     static struct timeval timeout;
 
     msecs = tmr_mstimeout( nowP );
     if ( msecs == INFTIM )
-	return (struct timeval*) 0;
+	{
+		return (struct timeval*) 0;
+	}
     timeout.tv_sec = msecs / 1000L;
     timeout.tv_usec = ( msecs % 1000L ) * 1000L;
     return &timeout;
-    }
+}
 
 
-long
-tmr_mstimeout( struct timeval* nowP )
-    {
+long tmr_mstimeout( struct timeval* nowP )
+{
     int h;
     int gotone;
     long msecs, m;
@@ -238,82 +242,89 @@ tmr_mstimeout( struct timeval* nowP )
     for ( h = 0; h < HASH_SIZE; ++h )
 	{
 	t = timers[h];
-	if ( t != (Timer*) 0 )
+	i	f ( t != (Timer*) 0 )
 	    {
-	    m = ( t->time.tv_sec - nowP->tv_sec ) * 1000L +
-		( t->time.tv_usec - nowP->tv_usec ) / 1000L;
-	    if ( ! gotone )
-		{
-		msecs = m;
-		gotone = 1;
-		}
-	    else if ( m < msecs )
-		msecs = m;
+	    	m = ( t->time.tv_sec - nowP->tv_sec ) * 1000L +
+			( t->time.tv_usec - nowP->tv_usec ) / 1000L;
+	    	if ( ! gotone )
+			{
+				msecs = m;
+				gotone = 1;
+			}
+	    	else if ( m < msecs )
+			{
+				msecs = m;
+			}
 	    }
 	}
     if ( ! gotone )
-	return INFTIM;
+	{
+		return INFTIM;
+	}
     if ( msecs <= 0 )
-	msecs = 0;
+	{
+		msecs = 0;
+	}
     return msecs;
-    }
+}
 
 
-void
-tmr_run( struct timeval* nowP )
-    {
+void tmr_run( struct timeval* nowP )
+{
     int h;
     Timer* t;
     Timer* next;
 
     for ( h = 0; h < HASH_SIZE; ++h )
-	for ( t = timers[h]; t != (Timer*) 0; t = next )
+	{
+		for ( t = timers[h]; t != (Timer*) 0; t = next )
 	    {
-	    next = t->next;
-	    /* Since the lists are sorted, as soon as we find a timer
-	    ** that isn't ready yet, we can go on to the next list.
-	    */
-	    if ( t->time.tv_sec > nowP->tv_sec ||
-		 ( t->time.tv_sec == nowP->tv_sec &&
-		   t->time.tv_usec > nowP->tv_usec ) )
-		break;
-	    (t->timer_proc)( t->client_data, nowP );
-	    if ( t->periodic )
-		{
-		/* Reschedule. */
-		t->time.tv_sec += t->msecs / 1000L;
-		t->time.tv_usec += ( t->msecs % 1000L ) * 1000L;
-		if ( t->time.tv_usec >= 1000000L )
-		    {
-		    t->time.tv_sec += t->time.tv_usec / 1000000L;
-		    t->time.tv_usec %= 1000000L;
-		    }
-		l_resort( t );
-		}
-	    else
-		tmr_cancel( t );
+	    	next = t->next;
+	    	/* Since the lists are sorted, as soon as we find a timer
+	    	** that isn't ready yet, we can go on to the next list.
+	    	*/
+	    	if ( t->time.tv_sec > nowP->tv_sec ||( t->time.tv_sec == nowP->tv_sec &&t->time.tv_usec > nowP->tv_usec ) )
+			{
+				break;
+			}
+	    	(t->timer_proc)( t->client_data, nowP );
+	    	if ( t->periodic )
+			{
+				/* Reschedule. */
+				t->time.tv_sec += t->msecs / 1000L;
+				t->time.tv_usec += ( t->msecs % 1000L ) * 1000L;
+				if ( t->time.tv_usec >= 1000000L )
+		    	{
+		    		t->time.tv_sec += t->time.tv_usec / 1000000L;
+		    		t->time.tv_usec %= 1000000L;
+		    	}	
+				l_resort( t );
+			}
+	    	else
+			{
+				tmr_cancel( t );
+			}
 	    }
-    }
+	}
+}
 
 
-void
-tmr_reset( struct timeval* nowP, Timer* t )
-    {
+void tmr_reset( struct timeval* nowP, Timer* t )
+{
     t->time = *nowP;
     t->time.tv_sec += t->msecs / 1000L;
     t->time.tv_usec += ( t->msecs % 1000L ) * 1000L;
     if ( t->time.tv_usec >= 1000000L )
 	{
-	t->time.tv_sec += t->time.tv_usec / 1000000L;
-	t->time.tv_usec %= 1000000L;
+		t->time.tv_sec += t->time.tv_usec / 1000000L;
+		t->time.tv_usec %= 1000000L;
 	}
     l_resort( t );
-    }
+}
 
 
-void
-tmr_cancel( Timer* t )
-    {
+void tmr_cancel( Timer* t )
+{
     /* Remove it from its active list. */
     l_remove( t );
     --active_count;
@@ -322,44 +333,47 @@ tmr_cancel( Timer* t )
     free_timers = t;
     ++free_count;
     t->prev = (Timer*) 0;
-    }
+}
 
 
-void
-tmr_cleanup( void )
-    {
+void tmr_cleanup( void )
+{
     Timer* t;
 
     while ( free_timers != (Timer*) 0 )
 	{
-	t = free_timers;
-	free_timers = t->next;
-	--free_count;
-	free( (void*) t );
-	--alloc_count;
+		t = free_timers;
+		free_timers = t->next;
+		--free_count;
+		free( (void*) t );
+		--alloc_count;
 	}
-    }
+}
 
 
-void
-tmr_term( void )
-    {
+void tmr_term( void )
+{
     int h;
 
     for ( h = 0; h < HASH_SIZE; ++h )
-	while ( timers[h] != (Timer*) 0 )
-	    tmr_cancel( timers[h] );
+	{
+		while ( timers[h] != (Timer*) 0 )
+	    {
+			tmr_cancel( timers[h] );
+		}
+	}
     tmr_cleanup();
-    }
+}
 
 
 /* Generate debugging statistics syslog message. */
-void
-tmr_logstats( long secs )
-    {
+void tmr_logstats( long secs )
+{
     syslog(
 	LOG_NOTICE, "  timers - %d allocated, %d active, %d free",
 	alloc_count, active_count, free_count );
     if ( active_count + free_count != alloc_count )
-	syslog( LOG_ERR, "timer counts don't add up!" );
-    }
+	{
+		syslog( LOG_ERR, "timer counts don't add up!" );
+	}
+}

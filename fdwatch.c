@@ -75,10 +75,10 @@
 
 static int nfiles;                  //最大支持的文件的数量
 static long nwatches;           
-static int* fd_rw;
-static void** fd_data;
-static int nreturned;
-static int next_ridx;
+static int* fd_rw;                  //
+static void** fd_data;              //
+static int nreturned;               //
+static int next_ridx;               //下一个需要读取的文件描述符的索引值
 
 #ifdef HAVE_KQUEUE
 
@@ -277,7 +277,7 @@ int fdwatch_check_fd( int fd )
     return CHECK_FD( fd );
 }
 
-
+/***/
 void* fdwatch_get_next_client_data( void )
 {
     int fd;
