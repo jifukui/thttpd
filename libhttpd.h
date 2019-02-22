@@ -100,10 +100,10 @@ typedef struct {
     int initialized;                //http服务器是否初始化状态标志位
     httpd_server* hs;               //http服务器结构对象
     httpd_sockaddr client_addr;     //http客户端地址信息
-    char* read_buf;
-    size_t read_size;
-    size_t read_idx;
-    size_t checked_idx;
+    char* read_buf;                 //读取的数据存放的位置
+    size_t read_size;               //读取数据的数据空间
+    size_t read_idx;                //当前读取数据的指针
+    size_t checked_idx;             //
     int checked_state;
     int method;
     int status;
@@ -160,7 +160,7 @@ typedef struct {
     int keep_alive;
     int should_linger;
     struct stat sb;
-    int conn_fd;        //连接的文件描述符
+    int conn_fd;            //连接的文件描述符
     char* file_address;
 } httpd_conn;
 

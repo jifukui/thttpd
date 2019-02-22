@@ -277,7 +277,11 @@ int fdwatch_check_fd( int fd )
     return CHECK_FD( fd );
 }
 
-/***/
+/**获取下一个需要处理的文件描述符的索引值
+ * 判断下一个文件描述符的索引值是否正确
+ * 对于正确的文件描述符索引值获取真正文件描述符的值
+ * 根据文件描述符的值获取的用户数据存储的地址
+*/
 void* fdwatch_get_next_client_data( void )
 {
     int fd;

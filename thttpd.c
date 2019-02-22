@@ -1693,36 +1693,53 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 	}
 }
 
-/**读客户数据*/
+/**从客户端的连接获取数据*/
 static void handle_read( connecttab* c, struct timeval* tvP )
 {
     int sz;
     ClientData client_data;
     httpd_conn* hc = c->hc;
-
+#ifdef JI_DEBUG
+		printf("connect fd is %d\n",hc->conn_fd);
+		printf("the read size is %d\n",hc->read_size);
+#endif
     /* Is there room in our buffer to read more bytes? */
-	/**对于读取的文件的数量大于总的文件的大小的处理*/
+	/**对于读取数据的索引值大于数据存储空间时的处理*/
     if ( hc->read_idx >= hc->read_size )
 	{
-		/**对于文件的打下大于5000字符时的处理*/
+#ifdef JI_DEBUG
+		printf("The read size is to small\n");
+#endif
+		/**对于读数据空间的大小大于5000字节时的处理*/
 		if ( hc->read_size > 5000 )
 	    {
+#ifdef JI_DEBUG
+			printf("The read size is to big\n");
+#endif
 	    	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 	    	finish_connection( c, tvP );
 	    	return;
 	    }
+		/**给此连接的读数据的数据空间增加1000字节*/
+#ifdef JI_DEBUG
+		printf("The add read size 1000\n");
+#endif
 		httpd_realloc_str(&hc->read_buf, &hc->read_size, hc->read_size + 1000 );
 	}
-
+#ifdef JI_DEBUG
+		printf("The read size is ok \n");
+#endif
     /* Read some more bytes. */
-	/**服务器从客户端读取数据，并将数据存储至read_buf中*/
+	/**服务器从客户端读取数据hc->read_size - hc->read_idx个字节，并将数据存储至read_buf中*/
     sz = read(hc->conn_fd, &(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx );
+	/**对于读取到文件结束时的处理*/
     if ( sz == 0 )
 	{
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 		finish_connection( c, tvP );
 		return;
 	}
+	/**对于读取数据错误的处理*/
     if ( sz < 0 )
 	{
 		/* Ignore EINTR and EAGAIN.  Also ignore EWOULDBLOCK.  At first glance
@@ -1738,13 +1755,19 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 		finish_connection( c, tvP );
 		return;
 	}
+	/**更新读取数据的位置*/
     hc->read_idx += sz;
+	/**更新时间*/
     c->active_at = tvP->tv_sec;
 
     /* Do we have a complete request yet? */
+	/**获取文件中的请求头HTTP/0.9 request 即第一行*/
     switch ( httpd_got_request( hc ) )
 	{
 		case GR_NO_REQUEST:
+#ifdef JI_DEBUG
+			printf("The buf is %s \n",hc->read_buf[hc->read_idx-sz]);
+#endif
 			return;
 		case GR_BAD_REQUEST:
 			httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
@@ -1811,6 +1834,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	}
 
     /* Cool, we have a valid connection and a file to send to it. */
+	/**设置连接的状态为发送状态*/
     c->conn_state = CNST_SENDING;
     c->started_at = tvP->tv_sec;
     c->wouldblock_delay = 0;

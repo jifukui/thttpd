@@ -1890,8 +1890,9 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 ** have checked so far; and hc->checked_state is the current state of the
 ** finite state machine.
 */
+/**获取Http请求的第一行并判断是否正确*/
 int httpd_got_request( httpd_conn* hc )
-    {
+{
     char c;
 
     for ( ; hc->checked_idx < hc->read_idx; ++hc->checked_idx )
