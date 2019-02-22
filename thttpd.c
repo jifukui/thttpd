@@ -1774,7 +1774,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 			return;
 		case GR_GOT_REQUEST:
 #ifdef JI_DEBUG
-			strncpy(ji_debugbuf,hc->read_buf[0],600);
+			strncpy(ji_debugbuf,hc->read_buf,600);
 			ji_debugbuf[600]=NULL;
 			printf("The buf is %s\n",ji_debugbuf);
 #endif
