@@ -2083,7 +2083,7 @@ int httpd_parse_request( httpd_conn* hc )
 	}
     *url++ = '\0';
     url += strspn( url, " \t\012\015" );
-#ifdef
+#ifdef JI_DEBUG
 	printf("The url is %s\n",url);
 #endif
 	/**获取协议字段*/
@@ -2111,7 +2111,7 @@ int httpd_parse_request( httpd_conn* hc )
 	    }
 	}
     hc->protocol = protocol;
-#ifdef
+#ifdef JI_DEBUG
 	printf("The protocol is %s\n",protocol);
 #endif
     /* Check for HTTP/1.1 absolute URL. */
@@ -2175,7 +2175,7 @@ int httpd_parse_request( httpd_conn* hc )
 		httpd_send_err( hc, 501, err501title, "", err501form, method_str );
 		return -1;
 	}
-#ifdef
+#ifdef JI_DEBUG
 	printf("The method is %s\n",method_str);
 #endif
 	/**对URL进行处理转换为非转义状态*/
