@@ -865,6 +865,7 @@ int main( int argc, char** argv )
 					}
 		    		case CNST_SENDING: 
 					{
+						/**将生成的数据进行发送处理*/
 						handle_send( c, &tv ); 
 						break;
 					}
@@ -1810,6 +1811,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	}
 
     /* Start the connection going. */
+	/**这里为Http数据的处理和返回数据的生成*/
     if ( httpd_start_request( hc, tvP ) < 0 )
 	{
 		/* Something went wrong.  Close down the connection. */

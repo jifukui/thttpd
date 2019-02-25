@@ -238,7 +238,7 @@ void fdwatch_add_fd( int fd, void* client_data, int rw )
 
 
 /* Remove a descriptor from the watch list. */
-/***/
+/**删除队列中的文件描述符*/
 void fdwatch_del_fd( int fd )
 {
     if ( fd < 0 || fd >= nfiles || fd_rw[fd] == -1 )

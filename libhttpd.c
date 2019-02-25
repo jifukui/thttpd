@@ -506,7 +506,7 @@ void httpd_terminate( httpd_server* hs )
     free_httpd_server( hs );
 }
 
-
+/**清除服务器的文件描述符的状态设置为初始状态*/
 void httpd_unlisten( httpd_server* hs )
 {
     if ( hs->listen4_fd != -1 )
@@ -629,6 +629,7 @@ void httpd_set_ndelay( int fd )
 
 
 /* Clear no-delay / non-blocking mode on a socket. */
+/**将此文件描述符设置为阻塞模式*/
 void httpd_clear_ndelay( int fd )
 {
     int flags, newflags;
@@ -2073,8 +2074,11 @@ int httpd_parse_request( httpd_conn* hc )
     char* pi;
 
     hc->checked_idx = 0;	/* reset */
+	/**对请求头进行处理*/
     method_str = bufgets( hc );
-	/**获取url字段*/
+	/**获取请求同中第一次出现以下字符的位置，用于获取url字段
+	 * URL为出现以下字符的位置
+	*/
     url = strpbrk( method_str, " \t\012\015" );
     if ( url == (char*) 0 )
 	{
@@ -2082,6 +2086,7 @@ int httpd_parse_request( httpd_conn* hc )
 		return -1;
 	}
     *url++ = '\0';
+	/**过滤掉出现的如下字符*/
     url += strspn( url, " \t\012\015" );
 #ifdef JI_DEBUG
 	printf("The url is %s\n",url);
@@ -2183,9 +2188,12 @@ int httpd_parse_request( httpd_conn* hc )
     httpd_realloc_str(&hc->decodedurl, &hc->maxdecodedurl, strlen( hc->encodedurl ) );
     strdecode( hc->decodedurl, hc->encodedurl );
 	/**对URL进行处理*/
-    httpd_realloc_str(
-	&hc->origfilename, &hc->maxorigfilename, strlen( hc->decodedurl ) );
+    httpd_realloc_str(&hc->origfilename, &hc->maxorigfilename, strlen( hc->decodedurl ) );
+	/**设置原始的文件路径*/
     (void) strcpy( hc->origfilename, &hc->decodedurl[1] );
+#ifdef JI_DEBUG
+	printf("The origin filename is %s\n",hc->origfilename);
+#endif
     /* Special case for top-level URL. */
     if ( hc->origfilename[0] == '\0' )
 	{
@@ -2193,11 +2201,13 @@ int httpd_parse_request( httpd_conn* hc )
 	}
 
     /* Extract query string from encoded URL. */
+	/***/
     cp = strchr( hc->encodedurl, '?' );
     if ( cp != (char*) 0 )
 	{
 		++cp;
 		httpd_realloc_str( &hc->query, &hc->maxquery, strlen( cp ) );
+		/**对请求的处理*/
 		(void) strcpy( hc->query, cp );
 		/* Remove query from (decoded) origfilename. */
 		cp = strchr( hc->origfilename, '?' );
@@ -2213,7 +2223,7 @@ int httpd_parse_request( httpd_conn* hc )
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 		return -1;
 	}
-
+	/**对于http 1.x的处理*/
     if ( hc->mime_flag )
 	{
 		/* Read the MIME headers. */
@@ -2554,6 +2564,7 @@ static char* bufgets( httpd_conn* hc )
     for ( i = hc->checked_idx; hc->checked_idx < hc->read_idx; ++hc->checked_idx )
 	{
 		c = hc->read_buf[hc->checked_idx];
+		/**对于字符为如下字符将此字符替换为空字符*/
 		if ( c == '\012' || c == '\015' )
 	    {
 	    	hc->read_buf[hc->checked_idx] = '\0';
@@ -2569,7 +2580,7 @@ static char* bufgets( httpd_conn* hc )
     return (char*) 0;
 }
 
-
+/**对原始文件名的处理*/
 static void de_dotdot( char* file )
 {
     char* cp;
@@ -3583,6 +3594,7 @@ static void cgi_interpose_output( httpd_conn* hc, int rfd )
 
 
 /* CGI child process. */
+/**CGI处理函数*/
 static void cgi_child( httpd_conn* hc )
     {
     int r;
@@ -3628,15 +3640,18 @@ static void cgi_child( httpd_conn* hc )
 	}
 
     /* Make the environment vector. */
+	/**设置环境变量*/
     envp = make_envp( hc );
 
     /* Make the argument vector. */
+	/**设置参数变量*/
     argp = make_argp( hc );
 
     /* Set up stdin.  For POSTs we may have to set up a pipe from an
     ** interposer process, depending on if we've read some of the data
     ** into our buffer.
     */
+   	/**对于POST方式的处理*/
     if ( hc->method == METHOD_POST && hc->read_idx > hc->checked_idx )
 	{
 		int p[2];
@@ -3754,6 +3769,7 @@ static void cgi_child( httpd_conn* hc )
 
 #ifdef CGI_NICE
     /* Set priority. */
+	/**设置程序的优先级*/
     (void) nice( CGI_NICE );
 #endif /* CGI_NICE */
 
@@ -3797,19 +3813,21 @@ static void cgi_child( httpd_conn* hc )
     _exit( 1 );
 }
 
-
+/**cgi程序处理*/
 static int cgi( httpd_conn* hc )
 {
     int r;
     ClientData client_data;
-
+	/**判断是否是有效的CGI程序*/
     if ( hc->hs->cgi_limit != 0 && hc->hs->cgi_count >= hc->hs->cgi_limit )
 	{
 		httpd_send_err(hc, 503, httpd_err503title, "", httpd_err503form,hc->encodedurl );
 		return -1;
 	}
     ++hc->hs->cgi_count;
+	/**设置为非阻塞模式*/
     httpd_clear_ndelay( hc->conn_fd );
+	/**创建子进程*/
     r = fork( );
     if ( r < 0 )
 	{
@@ -3817,6 +3835,7 @@ static int cgi( httpd_conn* hc )
 		httpd_send_err(hc, 500, err500title, "", err500form, hc->encodedurl );
 		return -1;
 	}
+	/**子进程处理函数*/
     if ( r == 0 )
 	{
 	/* Child process. */
@@ -3824,12 +3843,13 @@ static int cgi( httpd_conn* hc )
 		httpd_unlisten( hc->hs );
 		cgi_child( hc );
 	}
-
+	/**父进程处理函数*/
     /* Parent process. */
     syslog( LOG_DEBUG, "spawned CGI process %d for file '%.200s'", r, hc->expnfilename );
 #ifdef CGI_TIMELIMIT
     /* Schedule a kill for the child process, in case it runs too long */
     client_data.i = r;
+	/**设置子进程程序运行的超时时间*/
     if ( tmr_create( (struct timeval*) 0, cgi_kill, client_data, CGI_TIMELIMIT * 1000L, 0 ) == (Timer*) 0 )
 	{
 		syslog( LOG_CRIT, "tmr_create(cgi_kill child) failed" );
@@ -3843,7 +3863,7 @@ static int cgi( httpd_conn* hc )
     return 0;
 }
 
-
+/**真正的读取正文中的内容*/
 static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 {
     static char* indexname;
@@ -3861,6 +3881,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     expnlen = strlen( hc->expnfilename );
 
     /* Stat the file. */
+	/**获取文件的状态，并对于有错误的文件进行错误处理*/
     if ( stat( hc->expnfilename, &hc->sb ) < 0 )
 	{
 		httpd_send_err( hc, 500, err500title, "", err500form, hc->encodedurl );
@@ -3872,6 +3893,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     ** a file that's not set world-readable and yet somehow is
     ** readable by the HTTP server and therefore the *whole* world.
     */
+   	/***/
     if ( ! ( hc->sb.st_mode & ( S_IROTH | S_IXOTH ) ) )
 	{
 		syslog(LOG_INFO,"%.80s URL \"%.80s\" resolves to a non world-readable file",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
@@ -3880,6 +3902,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	}
 
     /* Is it a directory? */
+	/**对于文件的类型为文件夹的处理*/
     if ( S_ISDIR(hc->sb.st_mode) )
 	{
 		/* If there's pathinfo, it's just a non-existent file. */
@@ -3893,9 +3916,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		** We send back an explicit redirect with the slash, because
 		** otherwise many clients can't build relative URLs properly.
 		*/
-		if ( strcmp( hc->origfilename, "" ) != 0 &&
-	     	strcmp( hc->origfilename, "." ) != 0 &&
-	     	hc->origfilename[strlen( hc->origfilename ) - 1] != '/' )
+		if ( strcmp( hc->origfilename, "" ) != 0 &&strcmp( hc->origfilename, "." ) != 0 &&hc->origfilename[strlen( hc->origfilename ) - 1] != '/' )
 	    {
 	    	send_dirredirect( hc );
 	    	return -1;
@@ -4043,9 +4064,8 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	}
 
     /* Is it world-executable and in the CGI area? */
-    if ( hc->hs->cgi_pattern != (char*) 0 &&
-	 ( hc->sb.st_mode & S_IXOTH ) &&
-	 match( hc->hs->cgi_pattern, hc->expnfilename ) )
+	/**对于文件是cgi文件的处理*/
+    if ( hc->hs->cgi_pattern != (char*) 0 &&( hc->sb.st_mode & S_IXOTH ) &&match( hc->hs->cgi_pattern, hc->expnfilename ) )
 	{
 		return cgi( hc );
 	}
@@ -4120,12 +4140,13 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     return 0;
 }
 
-/***/
+/**设置开始读取正文中的内容*/
 int httpd_start_request( httpd_conn* hc, struct timeval* nowP )
 {
     int r;
 
     /* Really start the request. */
+	/**真正的读取正文中的内容*/
     r = really_start_request( hc, nowP );
 
     /* And return the status. */
@@ -4372,7 +4393,7 @@ static int really_check_referrer( httpd_conn* hc )
     return 1;
 }
 
-
+/***/
 char* httpd_ntoa( httpd_sockaddr* saP )
 {
 #ifdef USE_IPV6
