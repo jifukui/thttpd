@@ -2076,6 +2076,9 @@ int httpd_parse_request( httpd_conn* hc )
     hc->checked_idx = 0;	/* reset */
 	/**对请求头进行处理*/
     method_str = bufgets( hc );
+#ifdef JI_DEBUG
+	printf("The parse request data is \n:%s\n",hc->read_buf);
+#endif
 	/**获取请求同中第一次出现以下字符的位置，用于获取url字段
 	 * URL为出现以下字符的位置
 	*/
@@ -2093,6 +2096,7 @@ int httpd_parse_request( httpd_conn* hc )
 #endif
 	/**获取协议字段*/
     protocol = strpbrk( url, " \t\012\015" );
+	/**对于数据第一行有两组组数据为http0.9版本协议的处理*/
     if ( protocol == (char*) 0 )
 	{
 		protocol = "HTTP/0.9";
