@@ -600,11 +600,14 @@ void httpd_write_response( httpd_conn* hc )
     /* If we are in a sub-process, turn off no-delay mode. */
     if ( sub_process )
 	{
+		/**设置为阻塞模式*/
 		httpd_clear_ndelay( hc->conn_fd );
 	}
     /* Send the response, if necessary. */
+	/**对于返回的数据的长度大于0的处理*/
     if ( hc->responselen > 0 )
 	{
+		/**向文件描述符中写入数据*/
 		(void) httpd_write_fully( hc->conn_fd, hc->response, hc->responselen );
 		hc->responselen = 0;
 	}
@@ -1195,7 +1198,7 @@ static int auth_check2( httpd_conn* hc, char* dirname  )
 
 #endif /* AUTH_FILE */
 
-
+/**返回文件的路径结构*/
 static void send_dirredirect( httpd_conn* hc )
 {
     static char* location;
@@ -1260,6 +1263,7 @@ static int hexit( char c )
 /* Copies and decodes a string.  It's ok for from and to to be the
 ** same string.
 */
+/**将网络字符转换为标准字符格式*/
 static void strdecode( char* to, char* from )
 {
     for ( ; *from != '\0'; ++to, ++from )
@@ -1499,6 +1503,7 @@ static int vhost_map( httpd_conn* hc )
 ** This is a fairly nice little routine.  It handles any size filenames
 ** without excessive mallocs.
 */
+/***/
 static char* expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped )
 {
     static char* checked;
@@ -1510,7 +1515,7 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
     char* r;
     char* cp1;
     char* cp2;
-
+	/**对于设置不进行符号连接的处理*/
     if ( no_symlink_check )
 	{
 	/* If we are chrooted, we can actually skip the symlink-expansion,
@@ -2074,7 +2079,7 @@ int httpd_parse_request( httpd_conn* hc )
     char* pi;
 
     hc->checked_idx = 0;	/* reset */
-	/**对请求头进行处理*/
+	/**获取一行数据，即对请求行进行处理*/
     method_str = bufgets( hc );
 #ifdef JI_DEBUG
 	printf("The parse request data is \n:%s\n",hc->read_buf);
@@ -2094,18 +2099,21 @@ int httpd_parse_request( httpd_conn* hc )
 #ifdef JI_DEBUG
 	printf("The url is %s\n",url);
 #endif
-	/**获取协议字段*/
+	/**判断请求方式后有几段数据用于分析使用的HTTP的协议的版本*/
     protocol = strpbrk( url, " \t\012\015" );
 	/**对于数据第一行有两组组数据为http0.9版本协议的处理*/
     if ( protocol == (char*) 0 )
 	{
 		protocol = "HTTP/0.9";
+		/**设置mime的标志*/
 		hc->mime_flag = 0;
 	}
     else
 	{
 		*protocol++ = '\0';
+		/**获取协议字段的开始位置*/
 		protocol += strspn( protocol, " \t\012\015" );
+		/**对于开始字段之后有非上述数据的处理*/
 		if ( *protocol != '\0' )
 	    {
 	    	eol = strpbrk( protocol, " \t\012\015" );
@@ -2115,15 +2123,18 @@ int httpd_parse_request( httpd_conn* hc )
 			}
 	    	if ( strcasecmp( protocol, "HTTP/1.0" ) != 0 )
 			{
+				/**设置是http1.1的标志*/
 				hc->one_one = 1;
 			}
 	    }
 	}
+	/**设置连接的http的协议版本*/
     hc->protocol = protocol;
 #ifdef JI_DEBUG
 	printf("The protocol is %s\n",protocol);
 #endif
     /* Check for HTTP/1.1 absolute URL. */
+	/**对于路径是完整的http协议路径的处理*/
     if ( strncasecmp( url, "http://", 7 ) == 0 )
 	{
 		if ( ! hc->one_one )
@@ -2148,7 +2159,7 @@ int httpd_parse_request( httpd_conn* hc )
 		(void) strcpy( hc->reqhost, reqhost );
 		*url = '/';
 	}
-
+	/**对于文件路径不是从根路径开始的处理*/
     if ( *url != '/' )
 	{
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
@@ -2189,29 +2200,39 @@ int httpd_parse_request( httpd_conn* hc )
 #endif
 	/**对URL进行处理转换为非转义状态*/
     hc->encodedurl = url;
+	/**进行url的转换，默认hc->maxdecodedurl的值为0
+	 * 给hc->decodedurl分配空间
+	*/
     httpd_realloc_str(&hc->decodedurl, &hc->maxdecodedurl, strlen( hc->encodedurl ) );
     strdecode( hc->decodedurl, hc->encodedurl );
-	/**对URL进行处理*/
+#ifdef JI_DEBUG
+	printf("The hc->decodedurl is %s\n",hc->decodedurl);
+	printf("The hc->encodedurl is %s\n",hc->encodedurl);
+#endif
+	/**对URL进行处理
+	 * 给hc->origfilename分配内存空间
+	*/
     httpd_realloc_str(&hc->origfilename, &hc->maxorigfilename, strlen( hc->decodedurl ) );
-	/**设置原始的文件路径*/
+	/**设置原始的文件路径，忽略掉第一个字符*/
     (void) strcpy( hc->origfilename, &hc->decodedurl[1] );
 #ifdef JI_DEBUG
 	printf("The origin filename is %s\n",hc->origfilename);
 #endif
     /* Special case for top-level URL. */
+	/**对于文件名的第一个字符为空字符的处理*/
     if ( hc->origfilename[0] == '\0' )
 	{
 		(void) strcpy( hc->origfilename, "." );
 	}
 
     /* Extract query string from encoded URL. */
-	/***/
+	/**判断请求路径中对于有问号的处理*/
     cp = strchr( hc->encodedurl, '?' );
     if ( cp != (char*) 0 )
 	{
 		++cp;
 		httpd_realloc_str( &hc->query, &hc->maxquery, strlen( cp ) );
-		/**对请求的处理*/
+		/**对请求的处理，添加到query数组中*/
 		(void) strcpy( hc->query, cp );
 		/* Remove query from (decoded) origfilename. */
 		cp = strchr( hc->origfilename, '?' );
@@ -2222,6 +2243,7 @@ int httpd_parse_request( httpd_conn* hc )
 	}
 
     de_dotdot( hc->origfilename );
+	/**对于非法文件名的处理*/
     if ( hc->origfilename[0] == '/' ||( hc->origfilename[0] == '.' && hc->origfilename[1] == '.' &&( hc->origfilename[2] == '\0' || hc->origfilename[2] == '/' ) ) )
 	{
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
@@ -2231,12 +2253,14 @@ int httpd_parse_request( httpd_conn* hc )
     if ( hc->mime_flag )
 	{
 		/* Read the MIME headers. */
+		/**对于请求头部的处理*/
 		while ( ( buf = bufgets( hc ) ) != (char*) 0 )
 	    {
 	    	if ( buf[0] == '\0' )
 			{
 				break;
 			}
+			/***/
 	    	if ( strncasecmp( buf, "Referer:", 8 ) == 0 )
 			{
 				cp = &buf[8];
@@ -2249,12 +2273,14 @@ int httpd_parse_request( httpd_conn* hc )
 				cp += strspn( cp, " \t" );
 				hc->referrer = cp;
 			}
+			/***/
 	    	else if ( strncasecmp( buf, "User-Agent:", 11 ) == 0 )
 			{
 				cp = &buf[11];
 				cp += strspn( cp, " \t" );
 				hc->useragent = cp;
 			}
+			/**获取主机名称*/
 	    	else if ( strncasecmp( buf, "Host:", 5 ) == 0 )
 			{
 				cp = &buf[5];
@@ -2271,6 +2297,7 @@ int httpd_parse_request( httpd_conn* hc )
 		    		return -1;
 		    	}
 			}
+			/**获取接收数据类型*/
 	    	else if ( strncasecmp( buf, "Accept:", 7 ) == 0 )
 			{
 				cp = &buf[7];
@@ -2291,6 +2318,7 @@ int httpd_parse_request( httpd_conn* hc )
 				}
 				(void) strcat( hc->accept, cp );
 			}
+			/**获取接收编码类型*/
 	    	else if ( strncasecmp( buf, "Accept-Encoding:", 16 ) == 0 )
 			{
 				cp = &buf[16];
@@ -2311,12 +2339,14 @@ int httpd_parse_request( httpd_conn* hc )
 				}
 				(void) strcpy( hc->accepte, cp );
 			}
+			/**获取接收语言类型*/
 	    	else if ( strncasecmp( buf, "Accept-Language:", 16 ) == 0 )
 			{
 				cp = &buf[16];
 				cp += strspn( cp, " \t" );
 				hc->acceptl = cp;
 			}
+			/***/
 	    	else if ( strncasecmp( buf, "If-Modified-Since:", 18 ) == 0 )
 			{
 				cp = &buf[18];
@@ -2326,12 +2356,14 @@ int httpd_parse_request( httpd_conn* hc )
 					syslog( LOG_DEBUG, "unparsable time: %.80s", cp );
 				}
 			}
+			/**cookie*/
 	    	else if ( strncasecmp( buf, "Cookie:", 7 ) == 0 )
 			{
 				cp = &buf[7];
 				cp += strspn( cp, " \t" );
 				hc->cookie = cp;
 			}
+			/***/
 	    	else if ( strncasecmp( buf, "Range:", 6 ) == 0 )
 			{
 				/* Only support %d- and %d-%d, not %d-%d,%d-%d or -%d. */
@@ -2363,6 +2395,7 @@ int httpd_parse_request( httpd_conn* hc )
 					}
 		    	}
 			}
+			/***/
 	    	else if ( strncasecmp( buf, "Range-If:", 9 ) == 0 ||strncasecmp( buf, "If-Range:", 9 ) == 0 )
 			{
 				cp = &buf[9];
@@ -2372,23 +2405,27 @@ int httpd_parse_request( httpd_conn* hc )
 					syslog( LOG_DEBUG, "unparsable time: %.80s", cp );
 				}
 			}
+			/**正文类型设置*/
 	    	else if ( strncasecmp( buf, "Content-Type:", 13 ) == 0 )
 			{
 				cp = &buf[13];
 				cp += strspn( cp, " \t" );
 				hc->contenttype = cp;
 			}
+			/**正文长度*/
 	    	else if ( strncasecmp( buf, "Content-Length:", 15 ) == 0 )
 			{
 				cp = &buf[15];
 				hc->contentlength = atol( cp );
 			}
+			/***/
 	    	else if ( strncasecmp( buf, "Authorization:", 14 ) == 0 )
 			{
 				cp = &buf[14];
 				cp += strspn( cp, " \t" );
 				hc->authorization = cp;
 			}
+			/**连接状态处理*/
 	    	else if ( strncasecmp( buf, "Connection:", 11 ) == 0 )
 			{
 				cp = &buf[11];
@@ -2438,10 +2475,10 @@ int httpd_parse_request( httpd_conn* hc )
 #endif /* LOG_UNKNOWN_HEADERS */
 	    }
 	}
-
+	/**对于http1.1版本协议的处理*/
     if ( hc->one_one )
 	{
-	/* Check that HTTP/1.1 requests specify a host, as required. */
+		/* Check that HTTP/1.1 requests specify a host, as required. */
 		if ( hc->reqhost[0] == '\0' && hc->hdrhost[0] == '\0' )
 	    {
 	    	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
@@ -2466,9 +2503,11 @@ int httpd_parse_request( httpd_conn* hc )
 
     /* Copy original filename to expanded filename. */
     httpd_realloc_str(&hc->expnfilename, &hc->maxexpnfilename, strlen( hc->origfilename ) );
+	/**设置扩展的文件名*/
     (void) strcpy( hc->expnfilename, hc->origfilename );
 
     /* Tilde mapping. */
+	/**对于文件米的第一个字符为~的处理*/
     if ( hc->expnfilename[0] == '~' )
 	{
 #ifdef TILDE_MAP_1
@@ -2488,6 +2527,7 @@ int httpd_parse_request( httpd_conn* hc )
 	}
 
     /* Virtual host mapping. */
+	/**虚拟主机映射的处理*/
     if ( hc->hs->vhost )
 	{
 		if ( ! vhost_map( hc ) )
@@ -2500,6 +2540,7 @@ int httpd_parse_request( httpd_conn* hc )
     /* Expand all symbolic links in the filename.  This also gives us
     ** any trailing non-existing components, for pathinfo.
     */
+   	/***/
     cp = expand_symlinks( hc->expnfilename, &pi, hc->hs->no_symlink_check, hc->tildemapped );
     if ( cp == (char*) 0 )
 	{
@@ -2509,9 +2550,11 @@ int httpd_parse_request( httpd_conn* hc )
     httpd_realloc_str( &hc->expnfilename, &hc->maxexpnfilename, strlen( cp ) );
     (void) strcpy( hc->expnfilename, cp );
     httpd_realloc_str( &hc->pathinfo, &hc->maxpathinfo, strlen( pi ) );
+	/**设置路径信息*/
     (void) strcpy( hc->pathinfo, pi );
 
     /* Remove pathinfo stuff from the original filename too. */
+	/**对于路径信息的第一个字符不为空字符的处理*/
     if ( hc->pathinfo[0] != '\0' )
 	{
 		int i;
@@ -2559,7 +2602,7 @@ int httpd_parse_request( httpd_conn* hc )
     return 0;
 }
 
-/**对获取的字符串进行将回车换行符转换为空字符*/
+/**对获取的字符串进行将回车换行符转换为空字符，即获取一行数据*/
 static char* bufgets( httpd_conn* hc )
 {
     int i;
@@ -2573,6 +2616,7 @@ static char* bufgets( httpd_conn* hc )
 	    {
 	    	hc->read_buf[hc->checked_idx] = '\0';
 	    	++hc->checked_idx;
+			/**对回车符之后的换行符的处理*/
 	    	if ( c == '\015' && hc->checked_idx < hc->read_idx &&hc->read_buf[hc->checked_idx] == '\012' )
 			{
 				hc->read_buf[hc->checked_idx] = '\0';
@@ -2592,6 +2636,9 @@ static void de_dotdot( char* file )
     int l;
 
     /* Collapse any multiple / sequences. */
+	/**判断file中是否存在//符号的处理
+	 * 第三个字符为/
+	*/
     while ( ( cp = strstr( file, "//") ) != (char*) 0 )
 	{
 		for ( cp2 = cp + 2; *cp2 == '/'; ++cp2 )
@@ -2602,10 +2649,14 @@ static void de_dotdot( char* file )
 	}
 
     /* Remove leading ./ and any /./ sequences. */
+	/**对于file的钱两个字符为./的处理
+	 * 删除./
+	*/
     while ( strncmp( file, "./", 2 ) == 0 )
 	{
 		(void) ol_strcpy( file, file + 2 );
 	}
+	/**对于字符串中存在/./的处理*/
     while ( ( cp = strstr( file, "/./") ) != (char*) 0 )
 	{
 		(void) ol_strcpy( cp, cp + 2 );
@@ -3885,7 +3936,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     expnlen = strlen( hc->expnfilename );
 
     /* Stat the file. */
-	/**获取文件的状态，并对于有错误的文件进行错误处理*/
+	/**获取文件的状态，
+	 * 并对于有错误的文件进行错误处理
+	 * 对于正确的文件将文件的信息写入hc->sb中*/
     if ( stat( hc->expnfilename, &hc->sb ) < 0 )
 	{
 		httpd_send_err( hc, 500, err500title, "", err500form, hc->encodedurl );
@@ -3897,7 +3950,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     ** a file that's not set world-readable and yet somehow is
     ** readable by the HTTP server and therefore the *whole* world.
     */
-   	/***/
+   	/**对于文件模式为其他用户没有读和操作的权限的处理
+		* 返回错误信息
+	   */
     if ( ! ( hc->sb.st_mode & ( S_IROTH | S_IXOTH ) ) )
 	{
 		syslog(LOG_INFO,"%.80s URL \"%.80s\" resolves to a non world-readable file",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
@@ -3910,6 +3965,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     if ( S_ISDIR(hc->sb.st_mode) )
 	{
 		/* If there's pathinfo, it's just a non-existent file. */
+		/**对于路径信息的第一个字符不为空字符的处理
+		 * 返回错误信息
+		*/
 		if ( hc->pathinfo[0] != '\0' )
 	    {
 	    	httpd_send_err( hc, 404, err404title, "", err404form, hc->encodedurl );
@@ -3920,6 +3978,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		** We send back an explicit redirect with the slash, because
 		** otherwise many clients can't build relative URLs properly.
 		*/
+		/**对于原始文件名没有或者是原始文件名为.和原始文件的最后一个字符不为/的处理返回文件路径结构*/
 		if ( strcmp( hc->origfilename, "" ) != 0 &&strcmp( hc->origfilename, "." ) != 0 &&hc->origfilename[strlen( hc->origfilename ) - 1] != '/' )
 	    {
 	    	send_dirredirect( hc );
@@ -3927,15 +3986,27 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    }
 
 		/* Check for an index file. */
+		/**检测可用的index文件*/
 		for ( i = 0; i < sizeof(index_names) / sizeof(char*); ++i )
 	    {
+#ifdef JI_DEBUG
+			printf("check index file\n");
+#endif
 	    	httpd_realloc_str(&indexname, &maxindexname,expnlen + 1 + strlen( index_names[i] ) );
+			/**设置indexname为hc->expnfilename*/
 	    	(void) strcpy( indexname, hc->expnfilename );
+			/**获取indexname的字符长度*/
 	    	indxlen = strlen( indexname );
+			/**对于indexname的字符长度为0或者是indexname的最后一个字符的不为/的处理
+			 * 在indexname后面添加/字符
+			*/
 	    	if ( indxlen == 0 || indexname[indxlen - 1] != '/' )
 			{
 				(void) strcat( indexname, "/" );
 			}
+			/**对于idnexname的值为./的处理
+			 * 设置indexname的第一个值为空字符
+			*/
 	    	if ( strcmp( indexname, "./" ) == 0 )
 			{
 				indexname[0] = '\0';
@@ -3943,6 +4014,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    	(void) strcat( indexname, index_names[i] );
 	    	if ( stat( indexname, &hc->sb ) >= 0 )
 			{
+#ifdef JI_DEBUG
+				printf("goto _one\n");
+#endif
 				goto got_one;
 			}
 	    }

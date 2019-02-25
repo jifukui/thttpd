@@ -74,7 +74,10 @@ static int debug;
 static unsigned short port;
 static char* dir;
 static char* data_dir;
-static int do_chroot, no_log, no_symlink_check, do_vhost, do_global_passwd;
+static int do_chroot, no_log;
+static int no_symlink_check;
+static int do_vhost;
+static int do_global_passwd;
 static char* cgi_pattern;
 static int cgi_limit;
 static char* url_pattern;
@@ -2180,6 +2183,7 @@ static void update_throttles( ClientData client_data, struct timeval* nowP )
 static void finish_connection( connecttab* c, struct timeval* tvP )
 {
     /* If we haven't actually sent the buffered response yet, do so now. */
+	/**将数据写入缓冲中*/
     httpd_write_response( c->hc );
 
     /* And clear. */
