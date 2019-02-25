@@ -2060,7 +2060,7 @@ int httpd_got_request( httpd_conn* hc )
     return GR_NO_REQUEST;
 }
 
-
+/**对请求进行解析*/
 int httpd_parse_request( httpd_conn* hc )
 {
     char* buf;
@@ -2074,6 +2074,7 @@ int httpd_parse_request( httpd_conn* hc )
 
     hc->checked_idx = 0;	/* reset */
     method_str = bufgets( hc );
+	/**获取url字段*/
     url = strpbrk( method_str, " \t\012\015" );
     if ( url == (char*) 0 )
 	{
@@ -2082,6 +2083,10 @@ int httpd_parse_request( httpd_conn* hc )
 	}
     *url++ = '\0';
     url += strspn( url, " \t\012\015" );
+#ifdef
+	printf("The url is %s\n",url);
+#endif
+	/**获取协议字段*/
     protocol = strpbrk( url, " \t\012\015" );
     if ( protocol == (char*) 0 )
 	{
@@ -2106,7 +2111,9 @@ int httpd_parse_request( httpd_conn* hc )
 	    }
 	}
     hc->protocol = protocol;
-
+#ifdef
+	printf("The protocol is %s\n",protocol);
+#endif
     /* Check for HTTP/1.1 absolute URL. */
     if ( strncasecmp( url, "http://", 7 ) == 0 )
 	{
@@ -2138,7 +2145,7 @@ int httpd_parse_request( httpd_conn* hc )
 		httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 		return -1;
 	}
-
+	/**获取请求方式*/
     if ( strcasecmp( method_str, httpd_method_str( METHOD_GET ) ) == 0 )
 	{
 		hc->method = METHOD_GET;
@@ -2168,11 +2175,14 @@ int httpd_parse_request( httpd_conn* hc )
 		httpd_send_err( hc, 501, err501title, "", err501form, method_str );
 		return -1;
 	}
-
+#ifdef
+	printf("The method is %s\n",method_str);
+#endif
+	/**对URL进行处理转换为非转义状态*/
     hc->encodedurl = url;
     httpd_realloc_str(&hc->decodedurl, &hc->maxdecodedurl, strlen( hc->encodedurl ) );
     strdecode( hc->decodedurl, hc->encodedurl );
-
+	/**对URL进行处理*/
     httpd_realloc_str(
 	&hc->origfilename, &hc->maxorigfilename, strlen( hc->decodedurl ) );
     (void) strcpy( hc->origfilename, &hc->decodedurl[1] );
@@ -2535,7 +2545,7 @@ int httpd_parse_request( httpd_conn* hc )
     return 0;
 }
 
-
+/**对获取的字符串进行将回车换行符转换为空字符*/
 static char* bufgets( httpd_conn* hc )
 {
     int i;
@@ -4110,7 +4120,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     return 0;
 }
 
-
+/***/
 int httpd_start_request( httpd_conn* hc, struct timeval* nowP )
 {
     int r;

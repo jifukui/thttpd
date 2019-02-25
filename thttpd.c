@@ -898,8 +898,11 @@ int main( int argc, char** argv )
 
     /* The main loop terminated. */
     shut_down();
+	/**日志文件中进行记录*/
     syslog( LOG_NOTICE, "exiting" );
+	/**关闭日志文件*/
     closelog();
+	/**程序退出*/
     exit( 0 );
 }
 
@@ -1532,7 +1535,12 @@ static void read_throttlefile( char* tf )
     (void) fclose( fp );
 }
 
-
+/**获取当前时间
+ * 在日志文件中记录
+ * 复位连接数组中的状态值释放连接数组申请的内存
+ * 释放服务器申请的内存
+ * 
+*/
 static void shut_down( void )
 {
     int cnum;
@@ -1765,6 +1773,9 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	/**获取文件中的请求头HTTP/0.9 request 即第一行*/
     switch ( httpd_got_request( hc ) )
 	{
+#ifdef JI_DEBUG
+			printf("call httpd_got_request");
+#endif
 		case GR_NO_REQUEST:
 
 			return;
@@ -1779,8 +1790,11 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 			printf("The buf is %s\n",ji_debugbuf);
 #endif
 	}
-
+#ifdef JI_DEBUG
+		printf("call httpd_got_request\n",ji_debugbuf);
+#endif
     /* Yes.  Try parsing and resolving it. */
+	/**对请求头进行处理*/
     if ( httpd_parse_request( hc ) < 0 )
 	{
 		finish_connection( c, tvP );
@@ -2038,7 +2052,7 @@ static void handle_linger( connecttab* c, struct timeval* tvP )
 	}
 }
 
-
+/***/
 static int check_throttles( connecttab* c )
 {
     int tnum;
