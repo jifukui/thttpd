@@ -192,7 +192,7 @@ static long long atoll( const char* str );
 */
 static int sub_process = 0;
 
-
+/**这个函数貌似没有作用*/
 static void check_options( void )
 {
 #if defined(TILDE_MAP_1) && defined(TILDE_MAP_2)
@@ -201,7 +201,7 @@ static void check_options( void )
 #endif /* both */
 }
 
-
+/**释放Http服务器*/
 static void free_httpd_server( httpd_server* hs )
 {
     if ( hs->binding_hostname != (char*) 0 )
@@ -404,13 +404,14 @@ httpd_server* httpd_initialize(
     return hs;
 }
 
-
+/**初始化监听*/
 static int initialize_listen_socket( httpd_sockaddr* saP )
 {
     int listen_fd;
     int on, flags;
 
     /* Check sockaddr. */
+	/**检测IP地址类型是否正确*/
     if ( ! sockaddr_check( saP ) )
 	{
 		syslog( LOG_CRIT, "unknown sockaddr family on listen socket" );
@@ -418,24 +419,27 @@ static int initialize_listen_socket( httpd_sockaddr* saP )
 	}
 
     /* Create socket. */
+	/**创建socket*/
     listen_fd = socket( saP->sa.sa_family, SOCK_STREAM, 0 );
+	/**对于创建socket失败的处理*/
     if ( listen_fd < 0 )
 	{
 		syslog( LOG_CRIT, "socket %.80s - %m", httpd_ntoa( saP ) );
 		return -1;
 	}
+	/**设置创建的socket描述符的文件状态为创建新的进程时关闭此文件描述符*/
     (void) fcntl( listen_fd, F_SETFD, 1 );
 
     /* Allow reuse of local addresses. */
     on = 1;
-    if ( setsockopt(
-	     listen_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &on,
-	     sizeof(on) ) < 0 )
+	/**为是使socket可以被重新打开使用*/
+    if ( setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char*) &on,sizeof(on) ) < 0 )
 	{
 		syslog( LOG_CRIT, "setsockopt SO_REUSEADDR - %m" );
 
 	}
     /* Bind to it. */
+	/**绑定此套接字*/
     if ( bind( listen_fd, &saP->sa, sockaddr_len( saP ) ) < 0 )
 	{
 		syslog(LOG_CRIT, "bind %.80s - %m", httpd_ntoa( saP ) );
@@ -481,7 +485,7 @@ static int initialize_listen_socket( httpd_sockaddr* saP )
 		listen_fd, SOL_SOCKET, SO_ACCEPTFILTER, (char*) &af, sizeof(af) );
     }
 #endif /* SO_ACCEPTFILTER */
-
+	/**返回监听的文件描述符*/
     return listen_fd;
 }
 
@@ -495,14 +499,17 @@ void httpd_set_logfp( httpd_server* hs, FILE* logfp )
     hs->logfp = logfp;
 }
 
-
+/**http服务器关闭*/
 void httpd_terminate( httpd_server* hs )
 {
+	/**设置服务器不监听*/
     httpd_unlisten( hs );
+	/**关闭日志文件*/
     if ( hs->logfp != (FILE*) 0 )
 	{
 		(void) fclose( hs->logfp );
 	}
+	/**释放服务器的所有分配的相关内存*/
     free_httpd_server( hs );
 }
 
@@ -543,8 +550,7 @@ static char* err302form = "The actual URL is '%.80s'.\n";
 static char* err304title = "Not Modified";
 
 char* httpd_err400title = "Bad Request";
-char* httpd_err400form =
-    "Your request has bad syntax or is inherently impossible to satisfy.\n";
+char* httpd_err400form = "Your request has bad syntax or is inherently impossible to satisfy.\n";
 
 #ifdef AUTH_FILE
 static char* err401title = "Unauthorized";
@@ -584,6 +590,7 @@ char* httpd_err503form =
 
 
 /* Append a string to the buffer waiting to be sent as response. */
+/**将数据添加到返回数组中并设置返回数据的数据长度*/
 static void add_response( httpd_conn* hc, char* str )
 {
     size_t len;
@@ -615,6 +622,7 @@ void httpd_write_response( httpd_conn* hc )
 
 
 /* Set no-delay / non-blocking mode on a socket. */
+/**设置文件描述符的状态为非阻塞模式*/
 void httpd_set_ndelay( int fd )
 {
     int flags, newflags;
@@ -648,7 +656,10 @@ void httpd_clear_ndelay( int fd )
 	}
 }
 
-/**发送mime类型*/
+/**发送mime类型
+ * 对于需要设置mime类型的进行mime类型设置并添加到返回数据中
+ * 对不不需要mime类型的不进行设置
+*/
 static void send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extraheads, char* type, off_t length, time_t mod )
 {
     time_t now, expires;
@@ -663,14 +674,14 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 
     hc->status = status;
     hc->bytes_to_send = length;
+	/**对于需要mime类型的处理*/
     if ( hc->mime_flag )
 	{
-		if ( status == 200 && hc->got_range &&
-	     ( hc->last_byte_index >= hc->first_byte_index ) &&
-	     ( ( hc->last_byte_index != length - 1 ) ||
-	       ( hc->first_byte_index != 0 ) ) &&
-	     ( hc->range_if == (time_t) -1 ||
-	       hc->range_if == hc->sb.st_mtime ) )
+		if ( status == 200 && 
+			hc->got_range &&
+	     	( hc->last_byte_index >= hc->first_byte_index ) &&
+	     	( ( hc->last_byte_index != length - 1 ) ||( hc->first_byte_index != 0 ) ) &&
+	     	( hc->range_if == (time_t) -1 ||hc->range_if == hc->sb.st_mtime ) )
 	    {
 	    	partial_content = 1;
 	    	hc->status = status = 206;
@@ -691,18 +702,19 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 		(void) strftime( modbuf, sizeof(modbuf), rfc1123fmt, gmtime( &mod ) );
 		(void) my_snprintf(fixed_type, sizeof(fixed_type), type, hc->hs->charset );
 		(void) my_snprintf( buf, sizeof(buf),"%.20s %d %s\015\012Server: %s\015\012Content-Type: %s\015\012Date: %s\015\012Last-Modified: %s\015\012Accept-Ranges: bytes\015\012Connection: close\015\012",hc->protocol, status, title, EXPOSED_SERVER_SOFTWARE, fixed_type,nowbuf, modbuf );
+		/**将buf中的数据添加到返回数据中*/
 		add_response( hc, buf );
+		/**得到状态码并对状态码做处理*/
 		s100 = status / 100;
+		/**对于状态码不为200且不为300的处理*/
 		if ( s100 != 2 && s100 != 3 )
 	    {
-	    	(void) my_snprintf( buf, sizeof(buf),
-			"Cache-Control: no-cache,no-store\015\012" );
+	    	(void) my_snprintf( buf, sizeof(buf),"Cache-Control: no-cache,no-store\015\012" );
 	    	add_response( hc, buf );
 	    }
 		if ( encodings[0] != '\0' )
 	    {
-	    	(void) my_snprintf( buf, sizeof(buf),
-			"Content-Encoding: %s\015\012", encodings );
+	    	(void) my_snprintf( buf, sizeof(buf),"Content-Encoding: %s\015\012", encodings );
 	    	add_response( hc, buf );
 	    }
 		if ( partial_content )
@@ -737,7 +749,7 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 
 static int str_alloc_count = 0;
 static size_t str_alloc_size = 0;
-
+/**申请内存空间*/
 void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
 {
     if ( *maxsizeP == 0 )
@@ -765,7 +777,7 @@ void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
 	}
 }
 
-
+/**发送回复的数据*/
 static void send_response( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
 {
     char defanged_arg[1000], buf[2000];
@@ -802,7 +814,7 @@ static void send_response( httpd_conn* hc, int status, char* title, char* extrah
     send_response_tail( hc );
 }
 
-
+/**发送回复的数据的数据尾*/
 static void send_response_tail( httpd_conn* hc )
 {
     char buf[1000];
@@ -851,7 +863,7 @@ static void defang( char* str, char* dfstr, int dfsize )
     *cp2 = '\0';
 }
 
-
+/**发送错误信息*/
 void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, char* form, char* arg )
 {
 #ifdef ERR_DIR
@@ -887,6 +899,7 @@ void httpd_send_err( httpd_conn* hc, int status, char* title, char* extraheads, 
 
 
 #ifdef ERR_DIR
+/**发送错误文件*/
 static int send_err_file( httpd_conn* hc, int status, char* title, char* extraheads, char* filename )
 {
     FILE* fp;
@@ -898,9 +911,7 @@ static int send_err_file( httpd_conn* hc, int status, char* title, char* extrahe
 	{
 		return 0;
 	}
-    send_mime(
-	hc, status, title, "", extraheads, "text/html; charset=%s", (off_t) -1,
-	(time_t) 0 );
+    send_mime(hc, status, title, "", extraheads, "text/html; charset=%s", (off_t) -1,(time_t) 0 );
     for (;;)
 	{
 		r = fread( buf, 1, sizeof(buf) - 1, fp );
@@ -923,7 +934,7 @@ static int send_err_file( httpd_conn* hc, int status, char* title, char* extrahe
 
 
 #ifdef AUTH_FILE
-
+/**发送安全认证*/
 static void send_authenticate( httpd_conn* hc, char* realm )
 {
     static char* header;
@@ -954,7 +965,7 @@ static void send_authenticate( httpd_conn* hc, char* realm )
 **
 ** Then the 6-bit values are represented using the characters "A-Za-z0-9+/".
 */
-
+/**base-64解码表*/
 static int b64_decode_table[256] = {
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 00-0F */
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,  /* 10-1F */
@@ -979,6 +990,7 @@ static int b64_decode_table[256] = {
 ** be at most 3/4 the size of the encoded, and may be smaller if there
 ** are padding characters (blanks, newlines).
 */
+/**b64解码*/
 static int b64_decode( const char* str, unsigned char* space, int size )
 {
     const char* cp;
@@ -1060,6 +1072,7 @@ static int auth_check( httpd_conn* hc, char* dirname  )
 
 
 /* Returns -1 == unauthorized, 0 == no auth file, 1 = authorized. */
+/**安全认证*/
 static int auth_check2( httpd_conn* hc, char* dirname  )
 {
     static char* authpath;
