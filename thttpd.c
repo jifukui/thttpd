@@ -107,19 +107,21 @@ static int numthrottles, maxthrottles;
 
 /**连接结构*/
 typedef struct {
-    int conn_state;
-    int next_free_connect;
-    httpd_conn* hc;
+    int conn_state;						//连接状态
+    int next_free_connect;				//下一个可用的连接
+    httpd_conn* hc;						//连接对象指针
     int tnums[MAXTHROTTLENUMS];         /* throttle indexes */
-    int numtnums;
-    long max_limit, min_limit;
-    time_t started_at, active_at;
+    int numtnums;				
+    long max_limit;
+	long min_limit;
+    time_t started_at;
+	time_t active_at;
     Timer* wakeup_timer;
     Timer* linger_timer;
     long wouldblock_delay;
-    off_t bytes;
-    off_t end_byte_index;
-    off_t next_byte_index;
+    off_t bytes;					
+    off_t end_byte_index;				//最后一个需要些的值的索引值
+    off_t next_byte_index;				//下一个需要进行写的索引值
 } connecttab;
 static connecttab* connects;
 static int num_connects, max_connects, first_free_connect;
@@ -1814,7 +1816,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	}
 
     /* Start the connection going. */
-	/**这里为Http数据的处理和返回数据的生成*/
+	/**这里为Http数据的处理和返回数据的生成，同时对错误的处理*/
     if ( httpd_start_request( hc, tvP ) < 0 )
 	{
 		/* Something went wrong.  Close down the connection. */
@@ -1823,21 +1825,25 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	}
 
     /* Fill in end_byte_index. */
+	/**对于定义range的处理*/
     if ( hc->got_range )
 	{
 		c->next_byte_index = hc->first_byte_index;
 		c->end_byte_index = hc->last_byte_index + 1;
 	}
+	/**对于需要发送的数据的处理*/
     else if ( hc->bytes_to_send < 0 )
 	{
 		c->end_byte_index = 0;
 	}
+	/**对于正常的处理*/
     else
 	{
 		c->end_byte_index = hc->bytes_to_send;
 	}
 
     /* Check if it's already handled. */
+	/**对于文件的映射地址为0的处理*/
     if ( hc->file_address == (char*) 0 )
 	{
 		/* No file address means someone else is handling it. */
@@ -1850,6 +1856,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 		finish_connection( c, tvP );
 		return;
 	}
+	/***/
     if ( c->next_byte_index >= c->end_byte_index )
 	{
 		/* There's nothing to send. */
@@ -1877,22 +1884,25 @@ static void handle_send( connecttab* c, struct timeval* tvP )
     time_t elapsed;
     httpd_conn* hc = c->hc;
     int tind;
-
+	/**对于没有限制的处理*/
     if ( c->max_limit == THROTTLE_NOLIMIT )
 	{
 		max_bytes = 1000000000L;
 	}
+	/**对于有限制的处理*/
     else
 	{
 		max_bytes = c->max_limit / 4;	/* send at most 1/4 seconds worth */
 	}
 
     /* Do we need to write the headers first? */
+	/**对于hc->responselen的值为0的处理*/
     if ( hc->responselen == 0 )
 	{
 		/* No, just write the file. */
 		sz = write(hc->conn_fd, &(hc->file_address[c->next_byte_index]),MIN( c->end_byte_index - c->next_byte_index, max_bytes ) );
 	}
+	/**对于hc->responselen的值不为0的处理*/
     else
 	{
 		/* Yes.  We'll combine headers and file into a single writev(),
@@ -1906,12 +1916,12 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 		iv[1].iov_len = MIN( c->end_byte_index - c->next_byte_index, max_bytes );
 		sz = writev( hc->conn_fd, iv, 2 );
 	}
-
+	/**对于写数据错误的处理*/
     if ( sz < 0 && errno == EINTR )
 	{
 		return;
 	}
-
+	/***/
     if ( sz == 0 ||( sz < 0 && ( errno == EWOULDBLOCK || errno == EAGAIN ) ) )
 	{
 		/* This shouldn't happen, but some kernels, e.g.
@@ -1940,7 +1950,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	    }
 		return;
 	}
-
+	/**对于写失败的处理*/
     if ( sz < 0 )
 	{
 	/* Something went wrong, close this connection.
@@ -1965,6 +1975,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
     /* Ok, we wrote something. */
     c->active_at = tvP->tv_sec;
     /* Was this a headers + file writev()? */
+	/**对于调用写的方式不同的处理*/
     if ( hc->responselen > 0 )
 	{
 		/* Yes; did we write only part of the headers? */
@@ -1984,6 +1995,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	    }
 	}
     /* And update how much of the file we wrote. */
+	/**更新当前已经写的数据的数量*/
     c->next_byte_index += sz;
     c->hc->bytes_sent += sz;
     for ( tind = 0; tind < c->numtnums; ++tind )
@@ -1992,6 +2004,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	}
 
     /* Are we done? */
+	/**对于已经写完数据的处理*/
     if ( c->next_byte_index >= c->end_byte_index )
 	{
 		/* This connection is finished! */
@@ -2000,6 +2013,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	}
 
     /* Tune the (blockheaded) wouldblock delay. */
+	/**对于没有写完数据的处理*/
     if ( c->wouldblock_delay > MIN_WOULDBLOCK_DELAY )
 	{
 		c->wouldblock_delay -= MIN_WOULDBLOCK_DELAY;
@@ -2252,7 +2266,7 @@ static void clear_connection( connecttab* c, struct timeval* tvP )
 	}
 }
 
-
+/**彻底的关闭连接*/
 static void really_clear_connection( connecttab* c, struct timeval* tvP )
 {
     stats_bytes += c->hc->bytes_sent;
@@ -2327,9 +2341,10 @@ static void linger_clear_connection( ClientData client_data, struct timeval* now
     really_clear_connection( c, nowP );
 }
 
-
+/**关联函数*/
 static void occasional( ClientData client_data, struct timeval* nowP )
 {
+	/**设置内存上映射的文件需要进行是否清除处理*/
     mmc_cleanup( nowP );
     tmr_cleanup();
     watchdog_flag = 1;		/* let the watchdog know that we are alive */

@@ -648,7 +648,7 @@ void httpd_clear_ndelay( int fd )
 	}
 }
 
-
+/**发送mime类型*/
 static void send_mime( httpd_conn* hc, int status, char* title, char* encodings, char* extraheads, char* type, off_t length, time_t mod )
 {
     time_t now, expires;
@@ -1031,6 +1031,9 @@ static int b64_decode( const char* str, unsigned char* space, int size )
 
 
 /* Returns -1 == unauthorized, 0 == no auth file, 1 = authorized. */
+/**安全检测
+ * 对于设置hc->hs->global_passwd
+*/
 static int auth_check( httpd_conn* hc, char* dirname  )
 {
     if ( hc->hs->global_passwd )
@@ -1226,7 +1229,7 @@ static void send_dirredirect( httpd_conn* hc )
     send_response( hc, 302, err302title, header, err302form, location );
 }
 
-
+/**得到http请求方式*/
 char* httpd_method_str( int method )
 {
     switch ( method )
@@ -1241,7 +1244,7 @@ char* httpd_method_str( int method )
 	}
 }
 
-
+/**将16进制字符转换为10进制的值*/
 static int hexit( char c )
 {
     if ( c >= '0' && c <= '9' )
@@ -2806,10 +2809,12 @@ static void figure_mime( httpd_conn* hc )
     n_me_indexes = 0;
     for ( prev_dot = &hc->expnfilename[strlen(hc->expnfilename)]; ; prev_dot = dot )
 	{
+		/**从后面讯在最后一个.号的位置*/
 		for ( dot = prev_dot - 1; dot >= hc->expnfilename && *dot != '.'; --dot )
 	    {
 			;
 		}
+		/**对于没有找到.号的处理*/
 		if ( dot < hc->expnfilename )
 	    {
 	    	/* No dot found.  No more encoding extensions, and no type
@@ -3230,7 +3235,7 @@ mode  links    bytes  last-changed  name\n\
 
 #endif /* GENERATE_INDEXES */
 
-
+/**建立环境变量*/
 static char* build_env( char* fmt, char* arg )
 {
     char* cp;
@@ -3280,6 +3285,7 @@ static char* hostname_map( char* hostname )
 ** letting malicious clients overrun a buffer.  We don't have
 ** to worry about freeing stuff since we're a sub-process.
 */
+/**制作环境变量*/
 static char** make_envp( httpd_conn* hc )
 {
     static char* envp[50];
@@ -3400,6 +3406,7 @@ static char** make_envp( httpd_conn* hc )
 ** since we're a sub-process.  This gets done after make_envp() because we
 ** scribble on hc->query.
 */
+/**制作函数参量*/
 static char** make_argp( httpd_conn* hc )
 {
     char** argp;
@@ -3463,6 +3470,7 @@ static char** make_argp( httpd_conn* hc )
 ** directly is that we have already read part of the data into our
 ** buffer.
 */
+/**对于POST方式的处理*/
 static void cgi_interpose_input( httpd_conn* hc, int wfd )
 {
     size_t c;
@@ -3978,7 +3986,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		** We send back an explicit redirect with the slash, because
 		** otherwise many clients can't build relative URLs properly.
 		*/
-		/**对于原始文件名没有或者是原始文件名为.和原始文件的最后一个字符不为/的处理返回文件路径结构*/
+		/**对于原始文件名不为空字符串且原始文件名不为.且原始文件的最后一个字符不为/的处理
+		 * 
+		*/
 		if ( strcmp( hc->origfilename, "" ) != 0 &&strcmp( hc->origfilename, "." ) != 0 &&hc->origfilename[strlen( hc->origfilename ) - 1] != '/' )
 	    {
 	    	send_dirredirect( hc );
@@ -4024,6 +4034,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	/* Nope, no index file, so it's an actual directory request. */
 #ifdef GENERATE_INDEXES
 	/* Directories must be readable for indexing. */
+		/**对于文件的模式是其他用户不具有读属性的处理*/
 		if ( ! ( hc->sb.st_mode & S_IROTH ) )
 	    {
 	    	syslog(
@@ -4049,6 +4060,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 			return -1;
 		}
 		/* Ok, generate an index. */
+		/**返回当前目录文件的相关信息*/
 		return ls( hc );
 #else /* GENERATE_INDEXES */
 		syslog(LOG_INFO, "%.80s URL \"%.80s\" tried to index a directory",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
@@ -4084,20 +4096,27 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    	return -1;
 	    }
 	}
-
+#ifdef JI_DEBUG
+	/**对于文件的处理*/
+	printf("This is file \n");
+#endif
 #ifdef AUTH_FILE
     /* Check authorization for this directory. */
     httpd_realloc_str( &dirname, &maxdirname, expnlen );
     (void) strcpy( dirname, hc->expnfilename );
+	/**获取/字符在dirname字符串中最后出现的位置*/
     cp = strrchr( dirname, '/' );
+	/**对于没有出现的处理设置dirname的值为.*/
     if ( cp == (char*) 0 )
 	{
 		(void) strcpy( dirname, "." );
 	}
+	/**对于出现/字符的处理设置cp的值为0*/
     else
 	{
 		*cp = '\0';
 	}
+	/**安全检测*/
     if ( auth_check( hc, dirname ) == -1 )
 	{
 		return -1;
@@ -4119,14 +4138,9 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    	return -1;
 	    }
 	}
-    else if ( expnlen >= sizeof(AUTH_FILE) &&
-	      strcmp( &(hc->expnfilename[expnlen - sizeof(AUTH_FILE) + 1]), AUTH_FILE ) == 0 &&
-	      hc->expnfilename[expnlen - sizeof(AUTH_FILE)] == '/' )
+    else if ( expnlen >= sizeof(AUTH_FILE) &&strcmp( &(hc->expnfilename[expnlen - sizeof(AUTH_FILE) + 1]), AUTH_FILE ) == 0 &&hc->expnfilename[expnlen - sizeof(AUTH_FILE)] == '/' )
 	{
-		syslog(
-	    	LOG_NOTICE,
-	    	"%.80s URL \"%.80s\" tried to retrieve an auth file",
-	    	httpd_ntoa( &hc->client_addr ), hc->encodedurl );
+		syslog(LOG_NOTICE,"%.80s URL \"%.80s\" tried to retrieve an auth file",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
 		httpd_send_err(
 	    	hc, 403, err403title, "",
 	    	ERROR_FORM( err403form, "The requested URL '%.80s' is an authorization file, retrieving it is not permitted.\n" ),
@@ -4152,33 +4166,24 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     ** trying to either serve or run a non-CGI file as CGI.   Either case
     ** is prohibited.
     */
+   	/**对于文件的属性为其他用户具有操作属性的处理*/
     if ( hc->sb.st_mode & S_IXOTH )
 	{
-		syslog(
-	    	LOG_NOTICE, "%.80s URL \"%.80s\" is executable but isn't CGI",
-	    	httpd_ntoa( &hc->client_addr ), hc->encodedurl );
-		httpd_send_err(
-	    	hc, 403, err403title, "",
-	    	ERROR_FORM( err403form, "The requested URL '%.80s' resolves to a file which is marked executable but is not a CGI file; retrieving it is forbidden.\n" ),
-	    	hc->encodedurl );
+		syslog(LOG_NOTICE, "%.80s URL \"%.80s\" is executable but isn't CGI",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
+		httpd_send_err(hc, 403, err403title, "",ERROR_FORM( err403form, "The requested URL '%.80s' resolves to a file which is marked executable but is not a CGI file; retrieving it is forbidden.\n" ),hc->encodedurl );
 		return -1;
 	}
+	/**对于hc->pathinfo的值不为空字符的处理*/
     if ( hc->pathinfo[0] != '\0' )
 	{
-		syslog(
-	    	LOG_INFO, "%.80s URL \"%.80s\" has pathinfo but isn't CGI",
-	    	httpd_ntoa( &hc->client_addr ), hc->encodedurl );
-		httpd_send_err(
-	    	hc, 403, err403title, "",
-	    	ERROR_FORM( err403form, "The requested URL '%.80s' resolves to a file plus CGI-style pathinfo, but the file is not a valid CGI file.\n" ),
-	    	hc->encodedurl );
+		syslog(LOG_INFO, "%.80s URL \"%.80s\" has pathinfo but isn't CGI",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
+		httpd_send_err(hc, 403, err403title, "",ERROR_FORM( err403form, "The requested URL '%.80s' resolves to a file plus CGI-style pathinfo, but the file is not a valid CGI file.\n" ),hc->encodedurl );
 		return -1;
 	}
-
+	/**对于请求方式不为GET且请求方式不为HEAD的处理*/
     if ( hc->method != METHOD_GET && hc->method != METHOD_HEAD )
 	{
-		httpd_send_err(
-	    	hc, 501, err501title, "", err501form, httpd_method_str( hc->method ) );
+		httpd_send_err(hc, 501, err501title, "", err501form, httpd_method_str( hc->method ) );
 		return -1;
 	}
 
@@ -4187,32 +4192,28 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	{
 		hc->last_byte_index = hc->sb.st_size - 1;
 	}
-
+	/**指出mime类型*/
     figure_mime( hc );
-
+	/**对于请求方式为HEAD的处理*/
     if ( hc->method == METHOD_HEAD )
 	{
-		send_mime(
-	    	hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,
-	    	hc->sb.st_mtime );
+		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
 	}
     else if ( hc->if_modified_since != (time_t) -1 &&hc->if_modified_since >= hc->sb.st_mtime )
 	{
-		send_mime(
-	    	hc, 304, err304title, hc->encodings, "", hc->type, (off_t) -1,
-	    	hc->sb.st_mtime );
+		send_mime(hc, 304, err304title, hc->encodings, "", hc->type, (off_t) -1,hc->sb.st_mtime );
 	}
     else
 	{
+		/**对于Get方式的处理，对文件进行内存映射*/
 		hc->file_address = mmc_map( hc->expnfilename, &(hc->sb), nowP );
 		if ( hc->file_address == (char*) 0 )
 	    {
 	    	httpd_send_err( hc, 500, err500title, "", err500form, hc->encodedurl );
 	    	return -1;
 	    }
-		send_mime(
-	    	hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,
-	    	hc->sb.st_mtime );
+		/**发送mime类型*/
+		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
 	}
 
     return 0;
@@ -4558,7 +4559,9 @@ static long long atoll( const char* str )
     long long sign;
 
     while ( isspace( *str ) )
-	++str;
+	{
+		++str;
+	}
     switch ( *str )
 	{
 		case '-': 
@@ -4586,7 +4589,7 @@ static long long atoll( const char* str )
 
 /* Read the requested buffer completely, accounting for interruptions. */
 int httpd_read_fully( int fd, void* buf, size_t nbytes )
-    {
+{
     int nread;
 
     nread = 0;

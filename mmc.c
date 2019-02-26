@@ -52,6 +52,7 @@ typedef long long int64_t;
 
 /* Defines. */
 #ifndef DEFAULT_EXPIRE_AGE
+/**设置默认的到期时间为600*/
 #define DEFAULT_EXPIRE_AGE 600
 #endif
 #ifndef DESIRED_FREE_COUNT
@@ -110,7 +111,7 @@ static int add_hash( Map* m );
 static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 
-
+/**内存映射*/
 void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 {
     time_t now;
@@ -119,12 +120,17 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
     int fd;
 
     /* Stat the file, if necessary. */
+	/**对于传入的sbp已经被分配过内存的处理
+	 * 设置sb使用此处内存
+	*/
     if ( sbP != (struct stat*) 0 )
 	{
 		sb = *sbP;
 	}
+	/**对于传入的sbp没有被分配过内存的处理*/
     else
 	{
+		/**对于文件存在的处理*/
 		if ( stat( filename, &sb ) != 0 )
 	    {
 	    	syslog( LOG_ERR, "stat - %m" );
@@ -133,6 +139,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* Get the current time, if necessary. */
+	/**获取当前时间*/
     if ( nowP != (struct timeval*) 0 )
 	{
 		now = nowP->tv_sec;
@@ -143,12 +150,15 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* See if we have it mapped already, via the hash table. */
+	/**检测内存空间是否足够使用*/
     if ( check_hash_size() < 0 )
 	{
 		syslog( LOG_ERR, "check_hash_size() failure" );
 		return (void*) 0;
 	}
+	/**寻找此的值的映射文件信息*/
     m = find_hash( sb.st_ino, sb.st_dev, sb.st_size, sb.st_ctime );
+	/**对于找到的直接返回映射的地址*/
     if ( m != (Map*) 0 )
 	{
 		/* Yep.  Just return the existing map */
@@ -158,6 +168,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* Open the file. */
+	/**对于没有找到的打开文件*/
     fd = open( filename, O_RDONLY );
     if ( fd < 0 )
 	{
@@ -166,6 +177,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* Find a free Map entry or make a new one. */
+	/**对于打开文件成功且没有被映射的处理*/
     if ( free_maps != (Map*) 0 )
 	{
 		m = free_maps;
@@ -185,16 +197,17 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* Fill in the Map entry. */
-    m->ino = sb.st_ino;
-    m->dev = sb.st_dev;
-    m->size = sb.st_size;
-    m->ct = sb.st_ctime;
-    m->refcount = 1;
-    m->reftime = now;
+    m->ino = sb.st_ino;			//
+    m->dev = sb.st_dev;			//
+    m->size = sb.st_size;		//文件大小信息
+    m->ct = sb.st_ctime;		//文件
+    m->refcount = 1;			//设置文件的引用数量
+    m->reftime = now;			//设置文件的引用时间
 
     /* Avoid doing anything for zero-length files; some systems don't like
     ** to mmap them, other systems dislike mallocing zero bytes.
     */
+   	/**对于文件的大小为0的处理*/
     if ( m->size == 0 )
 	{
 		m->addr = (void*) 1;	/* arbitrary non-NULL address */
@@ -204,15 +217,23 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 		size_t size_size = (size_t) m->size;	/* loses on files >2GB */
 #ifdef HAVE_MMAP
 		/* Map the file into memory. */
+		/**将文件映射到内存中
+		 * 设置映射区的起始地址由系统决定
+		 * 最后返回映射的地址
+		*/
 		m->addr = mmap( 0, size_size, PROT_READ, MAP_PRIVATE, fd, 0 );
+		/**对于映射错误的处理*/
 		if ( m->addr == (void*) -1 && errno == ENOMEM )
 	    {
 	    	/* Ooo, out of address space.  Free all unreferenced maps
 	    	** and try again.
 	    	*/
+			/**释放引用值为0的映射*/
 	    	panic();
+			/**再次进行映射*/
 	    	m->addr = mmap( 0, size_size, PROT_READ, MAP_PRIVATE, fd, 0 );
 	    }
+		/**最终的对于映射失败的处理*/
 		if ( m->addr == (void*) -1 )
 	    {
 	    	syslog( LOG_ERR, "mmap - %m" );
@@ -253,6 +274,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
     (void) close( fd );
 
     /* Put the Map into the hash table. */
+	/**添加到hash表中失败的处理*/
     if ( add_hash( m ) < 0 )
 	{
 		syslog( LOG_ERR, "add_hash() failure" );
@@ -270,6 +292,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
     mapped_bytes += m->size;
 
     /* And return the address. */
+	/**返回映射的地址*/
     return m->addr;
 }
 
@@ -279,17 +302,24 @@ void mmc_unmap( void* addr, struct stat* sbP, struct timeval* nowP )
     Map* m = (Map*) 0;
 
     /* Find the Map entry for this address.  First try a hash. */
+	/**对于文件状态值不为空的处理*/
     if ( sbP != (struct stat*) 0 )
 	{
+		/**获取索引值*/
 		m = find_hash( sbP->st_ino, sbP->st_dev, sbP->st_size, sbP->st_ctime );
+		/**对于映射对应不为0且文件地址与映射地址不一致的处理
+		 * 设置映射对象的的内存地址为空
+		*/
 		if ( m != (Map*) 0 && m->addr != addr )
 	    {
 			m = (Map*) 0;
 		}
 	}
     /* If that didn't work, try a full search. */
+	/**对于映射的地址为空的处理*/
     if ( m == (Map*) 0 )
 	{
+		/**找到maps地址中映射的地址与传入的地址一致的映射对象*/
 		for ( m = maps; m != (Map*) 0; m = m->next )
 	    {
 			if ( m->addr == addr )
@@ -298,14 +328,19 @@ void mmc_unmap( void* addr, struct stat* sbP, struct timeval* nowP )
 			}
 		}
 	}
+	/**对于寻找到的映射对象的值为空的处理*/
     if ( m == (Map*) 0 )
 	{
 		syslog( LOG_ERR, "mmc_unmap failed to find entry!" );
 	}
+	/**对于寻找的的映射对象的值的引用为不大于0的处理*/
     else if ( m->refcount <= 0 )
 	{
 		syslog( LOG_ERR, "mmc_unmap found zero or negative refcount!" );
 	}
+	/**对于找到的映射文件的存在且引用值大于0的处理
+	 * 更新引用时间
+	*/
     else
 	{
 		--m->refcount;
@@ -378,7 +413,7 @@ void mmc_cleanup( struct timeval* nowP )
 	}
 }
 
-
+/**释放引用值为0的映射*/
 static void panic( void )
 {
     Map** mm;
@@ -453,22 +488,28 @@ void mmc_term( void )
 
 
 /* Make sure the hash table is big enough. */
+/**确定映射空间足够使用，对于未初始化和不够的进行内存申请*/
 static int check_hash_size( void )
 {
     int i;
     Map* m;
 
     /* Are we just starting out? */
+	/**对于hash表未使用过的处理*/
     if ( hash_table == (Map**) 0 )
 	{
+		/**初始化hash表的大小*/
 		hash_size = INITIAL_HASH_SIZE;
+		/**设置Hash表的掩码*/
 		hash_mask = hash_size - 1;
 	}
     /* Is it at least three times bigger than the number of entries? */
+	/**对于hash表的大小大于映射文件的数量的三倍*/
     else if ( hash_size >= map_count * 3 )
 	{
 		return 0;
 	}
+	/**如果大小不够大进行扩容*/
     else
 	{
 		/* No, got to expand. */
@@ -527,7 +568,7 @@ static int add_hash( Map* m )
     return -1;
 }
 
-
+/***/
 static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct )
 {
     unsigned int h, he, i;
@@ -554,7 +595,7 @@ static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct )
     return (Map*) 0;
 }
 
-
+/**根据传入的数据计算hash值*/
 static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct )
 {
     unsigned int h = 177573;

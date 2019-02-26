@@ -335,7 +335,7 @@ void tmr_cancel( Timer* t )
     t->prev = (Timer*) 0;
 }
 
-
+/**对于申请的计时器进行清理*/
 void tmr_cleanup( void )
 {
     Timer* t;

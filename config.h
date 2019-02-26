@@ -1,6 +1,6 @@
 /* config.h - configuration defines for thttpd and libhttpd
 **
-** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
+** Copyright � 1995,1998,1999,2000,2001 by Jef Poskanzer <jef@mail.acme.com>.
 ** All rights reserved.
 **
 ** Redistribution and use in source and binary forms, with or without
@@ -59,6 +59,7 @@
 */
 #ifdef notdef
 /* Some sample patterns.  Allow programs only in one central directory: */
+/**设置CGI程序的路径*/
 #define CGI_PATTERN "/cgi-bin/*"
 /* Allow programs in a central directory, or anywhere in a trusted
 ** user's tree: */
@@ -90,10 +91,12 @@
 /* CONFIGURE: How many seconds to allow for reading the initial request
 ** on a new connection.
 */
+/**设置读请求超时时间*/
 #define IDLE_READ_TIMELIMIT 60
 
 /* CONFIGURE: How many seconds before an idle connection gets closed.
 */
+/**设置发送数据的超时时间*/
 #define IDLE_SEND_TIMELIMIT 300
 
 /* CONFIGURE: The syslog facility to use.  Using this you can set up your
@@ -144,6 +147,7 @@
 ** You can override this in the config file with the "charset" setting,
 ** or on the command like with the -T flag.
 */
+/**设置默认字符集*/
 #define DEFAULT_CHARSET "UTF-8"
 
 
@@ -178,6 +182,7 @@
 ** when returning into to browsers.  Instead it'll just say "thttpd" with
 ** no version.
 */
+/**定义是否显示服务器的版本*/
 #define SHOW_SERVER_VERSION
 
 /* CONFIGURE: Define this if you want to always chroot(), without having
@@ -237,6 +242,7 @@
 ** initializing.  If this user (or the one specified by the -u flag) does
 ** not exist, the program will refuse to run.
 */
+/**设置默认用户名称*/
 #define DEFAULT_USER "nobody"
 
 /* CONFIGURE: When started as root, the program can automatically chdir()
@@ -272,6 +278,7 @@
 /* CONFIGURE: nice(2) value to use for CGI programs.  If this is undefined,
 ** CGI programs run at normal priority.
 */
+/**设置CGI程序的优先级*/
 #define CGI_NICE 10
 
 /* CONFIGURE: $PATH to use for CGI programs.
@@ -300,6 +307,7 @@
 ** a hard limit, thttpd will go over it if you really are accessing
 ** a whole lot of files.
 */
+/**设置映射文件的数量*/
 #define DESIRED_MAX_MAPPED_FILES 1000
 
 /* CONFIGURE: The mmap cache also tries to keep the total mapped bytes
@@ -307,6 +315,7 @@
 ** it's not a hard limit, thttpd will go over it if you really are
 ** accessing a bunch of large files.
 */
+/**设置映射文件内容的数量*/
 #define DESIRED_MAX_MAPPED_BYTES 1000000000
 
 

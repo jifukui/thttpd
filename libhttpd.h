@@ -102,66 +102,67 @@ typedef struct {
     httpd_sockaddr client_addr;     //http客户端地址信息
     char* read_buf;                 //读取的数据存放的位置
     size_t read_size;               //读取数据的数据空间
-    size_t read_idx;                //当前读取数据的指针
-    size_t checked_idx;             //
-    int checked_state;
-    int method;
-    int status;
-    off_t bytes_to_send;
-    off_t bytes_sent;
-    char* encodedurl;
-    char* decodedurl;
-    char* protocol;
-    char* origfilename;
-    char* expnfilename;
-    char* encodings;
-    char* pathinfo;
-    char* query;
-    char* referrer;
-    char* useragent;
-    char* accept;
-    char* accepte;
-    char* acceptl;
-    char* cookie;
-    char* contenttype;
-    char* reqhost;
-    char* hdrhost;
-    char* hostdir;
-    char* authorization;
-    char* remoteuser;
-    char* response;
-    size_t maxdecodedurl;
-    size_t maxorigfilename;
-    size_t maxexpnfilename;
-    size_t maxencodings;
-	size_t maxpathinfo;
-    size_t maxquery;
-    size_t maxaccept;
-    size_t maxaccepte;
-    size_t maxreqhost;
-    size_t maxhostdir;
-	size_t maxremoteuser;
-    size_t maxresponse;
+    size_t read_idx;                //当前读取数据的索引值
+    size_t checked_idx;             //当前处理的索引值
+    int checked_state;              //
+    int method;                     //请求方式
+    int status;                     //
+    off_t bytes_to_send;            //需要发送数据的数量
+    off_t bytes_sent;               //已经发送数据的数量
+    char* encodedurl;               //原始的编码的url
+    char* decodedurl;               //解码的URL
+    char* protocol;                 //协议字符串
+    char* origfilename;             //
+    char* expnfilename;             //
+    char* encodings;                //
+    char* pathinfo;                 //
+    char* query;                    //
+    char* referrer;                 //
+    char* useragent;                //
+    char* accept;                   //
+    char* accepte;                  //
+    char* acceptl;                  //
+    char* cookie;                   //
+    char* contenttype;              //
+    char* reqhost;                  //
+    char* hdrhost;                  //
+    char* hostdir;                  //
+    char* authorization;            //
+    char* remoteuser;               //
+    char* response;                 //
+    size_t maxdecodedurl;           //
+    size_t maxorigfilename;         //
+    size_t maxexpnfilename;         //
+    size_t maxencodings;            //
+	size_t maxpathinfo;             //
+    size_t maxquery;                //
+    size_t maxaccept;               //
+    size_t maxaccepte;              //
+    size_t maxreqhost;              //
+    size_t maxhostdir;              //
+	size_t maxremoteuser;           //
+    size_t maxresponse;             //
 #ifdef TILDE_MAP_2
-    char* altdir;
-    size_t maxaltdir;
+    char* altdir;                   //
+    size_t maxaltdir;               //
 #endif /* TILDE_MAP_2 */
-    size_t responselen;
-    time_t if_modified_since, range_if;
-    size_t contentlength;
-    char* type;		/* not malloc()ed */
-    char* hostname;	/* not malloc()ed */
-    int mime_flag;
-    int one_one;	/* HTTP/1.1 or better */
-    int got_range;
-    int tildemapped;	/* this connection got tilde-mapped */
-    off_t first_byte_index;
-    off_t last_byte_index;
-    int keep_alive;
-    int should_linger;
-    struct stat sb;
-    int conn_fd;            //连接的文件描述符
-    char* file_address;
+    size_t responselen;             //
+    time_t if_modified_since;       //
+    time_t range_if;                //
+    size_t contentlength;           //
+    char* type;                     /* not malloc()ed */             
+    char* hostname;	                /* not malloc()ed */        
+    int mime_flag;                  //mime标志
+    int one_one;	                /* HTTP/1.1 or better */
+    int got_range;                  //
+    int tildemapped;	            /* this connection got tilde-mapped */
+    off_t first_byte_index;         //
+    off_t last_byte_index;          //
+    int keep_alive;                 //
+    int should_linger;              //
+    struct stat sb;                 //文件状态值
+    int conn_fd;                    //连接的文件描述符
+    char* file_address;             //映射的文件的内存地址
 } httpd_conn;
 
 /* Methods. */
