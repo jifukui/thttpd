@@ -3483,14 +3483,18 @@ static char** make_argp( httpd_conn* hc )
 ** directly is that we have already read part of the data into our
 ** buffer.
 */
-/**对于POST方式的处理*/
+/**对于POST方式的处理
+ * hc为连接对象
+ * wfd为管道的读管道
+*/
 static void cgi_interpose_input( httpd_conn* hc, int wfd )
 {
     size_t c;
     ssize_t r;
     char buf[1024];
-
+	/**获取还未读取完毕的数据*/
     c = hc->read_idx - hc->checked_idx;
+	/**对于任然有数据需要读取将数据写入wfd所代表的文件描述符中*/
     if ( c > 0 )
 	{
 		if ( httpd_write_fully( wfd, &(hc->read_buf[hc->checked_idx]), c ) != c )
@@ -3498,6 +3502,9 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 			return;
 		}
 	}
+	/**如果读取到的数据小于服务器端发送的数据长度执行下面的处理
+	 * 读取hc->conn_fd的数据到buf中
+	*/
     while ( c < hc->contentlength )
 	{
 		r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
@@ -3528,6 +3535,7 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 ** unacceptably expensive.  The eventual fix will come when interposing
 ** gets integrated into the main loop as a tasklet instead of a process.
 */
+/***/
 static void post_post_garbage_hack( httpd_conn* hc )
 {
     char buf[2];
@@ -3727,11 +3735,11 @@ static void cgi_child( httpd_conn* hc )
     ** interposer process, depending on if we've read some of the data
     ** into our buffer.
     */
-   	/**对于POST方式的处理*/
+   	/**对于POST方式且需要读取的数据大于已经读取的数据的处理*/
     if ( hc->method == METHOD_POST && hc->read_idx > hc->checked_idx )
 	{
 		int p[2];
-
+		/**创建管道失败的处理*/
 		if ( pipe( p ) < 0 )
 	    {
 	    	syslog( LOG_ERR, "pipe - %m" );
@@ -3739,7 +3747,9 @@ static void cgi_child( httpd_conn* hc )
 	    	httpd_write_response( hc );
 	    	exit( 1 );
 	    }
+		/**创建管道成功*/
 		r = fork( );
+		/**创建子进程失败处理*/
 		if ( r < 0 )
 	    {
 	    	syslog( LOG_ERR, "fork - %m" );
@@ -3747,11 +3757,14 @@ static void cgi_child( httpd_conn* hc )
 	    	httpd_write_response( hc );
 	    	exit( 1 );
 	    }
+		/**创建子进程成功的处理*/
 		if ( r == 0 )
 	    {
 	    	/* Interposer process. */
 	    	sub_process = 1;
+			/**关闭读管道*/
 	    	(void) close( p[0] );
+			/***/
 	    	cgi_interpose_input( hc, p[1] );
 	    	exit( 0 );
 	    }
@@ -3766,6 +3779,9 @@ static void cgi_child( httpd_conn* hc )
     else
 	{
 		/* Otherwise, the request socket is stdin. */
+		/**对于连接的文件描述符不是标准输入文件描述符的处理
+		 * 将当前的文件描述符的复制给标准输入文件描述符
+		*/
 		if ( hc->conn_fd != STDIN_FILENO )
 	    {
 			(void) dup2( hc->conn_fd, STDIN_FILENO );

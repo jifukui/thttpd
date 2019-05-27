@@ -393,12 +393,15 @@ int main( int argc, char** argv )
 	{
 		cp = argv0;
 	}
+	/**打开日志系统*/
     openlog( cp, LOG_NDELAY|LOG_PID, LOG_FACILITY );
 
     /* Handle command-line arguments. */
+	/**输入命令处理*/
     parse_args( argc, argv );
 
     /* Read zone info now, in case we chroot(). */
+	/**c语言标准函数*/
     tzset();
 
     /* Look up hostname now, in case we chroot(). */
@@ -481,6 +484,7 @@ int main( int argc, char** argv )
 	}
 
     /* Switch directories if requested. */
+	
     if ( dir != (char*) 0 )
 	{
 		if ( chdir( dir ) < 0 )
@@ -1315,7 +1319,7 @@ static char* e_strdup( char* oldstr )
     return newstr;
 }
 
-/***/
+/**根据配置的信息配置IPV6或者IPV4的地址*/
 static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, httpd_sockaddr* sa6P, size_t sa6_len, int* gotv6P )
 {
 #ifdef USE_IPV6
