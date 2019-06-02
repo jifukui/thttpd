@@ -54,13 +54,14 @@ typedef void TimerProc( ClientData client_data, struct timeval* nowP );
 
 /* The Timer struct. */
 /**计时器结构体
- * timer_proc 处理函数
- * client_data 处理函数参数
- * msecs 超时时间单位为毫秒
- * periodic 是否一直使用标记位
- * time
- * prev 结构体的上一个
- * next 结构体的下一个
+ * timer_proc： 处理函数
+ * client_data： 处理函数参数
+ * msecs： 超时时间单位为毫秒
+ * periodic： 是否一直使用标记位
+ * time：
+ * prev： 结构体的上一个
+ * next： 结构体的下一个
+ * hash:
 */
 typedef struct TimerStruct {
     TimerProc* timer_proc;

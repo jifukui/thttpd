@@ -36,8 +36,10 @@
 
 #define HASH_SIZE 67
 static Timer* timers[HASH_SIZE];
-static Timer* free_timers;
-static int alloc_count, active_count, free_count;
+static Timer* free_timers;		/**当前可以使用的计时器*/
+static int alloc_count;			/**分配的计时器的数量*/
+static int active_count;		/**处于活跃状态的计时器的数量*/
+static int free_count;			/**处于空闲状态的计时器的数量*/
 
 ClientData JunkClientData;
 
@@ -50,9 +52,7 @@ static unsigned int hash( Timer* t )
     ** call.  This is because both of those guys call l_resort(), which
     ** recomputes the hash and moves the timer to the appropriate list.
     */
-    return (
-	(unsigned int) t->time.tv_sec ^
-	(unsigned int) t->time.tv_usec ) % HASH_SIZE;
+    return ((unsigned int) t->time.tv_sec ^(unsigned int) t->time.tv_usec ) % HASH_SIZE;
 }
 
 
@@ -125,7 +125,7 @@ static void l_remove( Timer* t )
 	}
 }
 
-
+/**重新添加此计时器*/
 static void l_resort( Timer* t )
 {
     /* Remove the timer from its old list. */
@@ -136,7 +136,7 @@ static void l_resort( Timer* t )
     l_add( t );
 }
 
-
+/**计时器初始化*/
 void tmr_init( void )
 {
     int h;
@@ -226,7 +226,7 @@ struct timeval* tmr_timeout( struct timeval* nowP )
     return &timeout;
 }
 
-
+/***/
 long tmr_mstimeout( struct timeval* nowP )
 {
     int h;
@@ -241,11 +241,10 @@ long tmr_mstimeout( struct timeval* nowP )
     */
     for ( h = 0; h < HASH_SIZE; ++h )
 	{
-	t = timers[h];
+		t = timers[h];
 		if ( t != (Timer*) 0 )
 	    {
-	    	m = ( t->time.tv_sec - nowP->tv_sec ) * 1000L +
-			( t->time.tv_usec - nowP->tv_usec ) / 1000L;
+	    	m = ( t->time.tv_sec - nowP->tv_sec ) * 1000L +( t->time.tv_usec - nowP->tv_usec ) / 1000L;
 	    	if ( ! gotone )
 			{
 				msecs = m;
@@ -308,7 +307,7 @@ void tmr_run( struct timeval* nowP )
 	}
 }
 
-
+/**复位计时器*/
 void tmr_reset( struct timeval* nowP, Timer* t )
 {
     t->time = *nowP;
@@ -367,11 +366,10 @@ void tmr_term( void )
 
 
 /* Generate debugging statistics syslog message. */
+/**计时器日志信息输出*/
 void tmr_logstats( long secs )
 {
-    syslog(
-	LOG_NOTICE, "  timers - %d allocated, %d active, %d free",
-	alloc_count, active_count, free_count );
+    syslog(LOG_NOTICE, "  timers - %d allocated, %d active, %d free",alloc_count, active_count, free_count );
     if ( active_count + free_count != alloc_count )
 	{
 		syslog( LOG_ERR, "timer counts don't add up!" );

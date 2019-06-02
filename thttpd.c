@@ -70,11 +70,12 @@ typedef long long int64_t;
 
 
 static char* argv0;
-static int debug;
+static int debug;					//debug标志
 static unsigned short port;
 static char* dir;
 static char* data_dir;
-static int do_chroot, no_log;
+static int do_chroot;
+static int  no_log;
 static int no_symlink_check;
 static int do_vhost;
 static int do_global_passwd;
@@ -92,7 +93,14 @@ static char* charset;
 static char* p3p;
 static int max_age;
 
-
+/**限制表
+ * pattern：文件的正则表达式
+ * max_limit：最大流量限制
+ * min_limit：最小流量限制
+ * rate：速率限制
+ * bytes_since_avg
+ * num_sending
+*/
 typedef struct {
     char* pattern;
     long max_limit, min_limit;
@@ -101,7 +109,8 @@ typedef struct {
     int num_sending;
     } throttletab;
 static throttletab* throttles;
-static int numthrottles, maxthrottles;
+static int numthrottles;
+static int maxthrottles;
 
 #define THROTTLE_NOLIMIT -1
 
@@ -110,22 +119,24 @@ typedef struct {
     int conn_state;						//连接状态
     int next_free_connect;				//下一个可用的连接
     httpd_conn* hc;						//连接对象指针
-    int tnums[MAXTHROTTLENUMS];         /* throttle indexes */
-    int numtnums;				
-    long max_limit;
-	long min_limit;
-    time_t started_at;
-	time_t active_at;
-    Timer* wakeup_timer;
-    Timer* linger_timer;
-    long wouldblock_delay;
-    off_t bytes;					
-    off_t end_byte_index;				//最后一个需要些的值的索引值
-    off_t next_byte_index;				//下一个需要进行写的索引值
+    int tnums[MAXTHROTTLENUMS];         /* throttle indexes 限流文件结构体*/
+    int numtnums;						/***/
+    long max_limit;						/**最大限制*/
+	long min_limit;						/**最小限制*/
+    time_t started_at;					/**开始位置*/
+	time_t active_at;					/**可用位置*/
+    Timer* wakeup_timer;				/**唤醒时间*/
+    Timer* linger_timer;				/**异常时间*/	
+    long wouldblock_delay;				/***/
+    off_t bytes;						/***/
+    off_t end_byte_index;				//最后一个值的位置
+    off_t next_byte_index;				//下一个连接的索引值
 } connecttab;
 static connecttab* connects;
-static int num_connects, max_connects, first_free_connect;
-static int httpd_conn_count;
+static int num_connects;				/**当前链接表使用的数量*/
+static int max_connects;				/**最大链接表数量*/
+static int first_free_connect;			/**第一个可以使用的链接表*/
+static int httpd_conn_count;			/**http连接的数量*/
 
 /* The connection states. */
 #define CNST_FREE 0
@@ -142,7 +153,9 @@ long stats_connections;
 off_t stats_bytes;
 int stats_simultaneous;
 
-static volatile int got_hup, got_usr1, watchdog_flag;
+static volatile int got_hup;			//重新打开日志文件标记
+static volatile int got_usr1;
+static volatile int  watchdog_flag;		//看门狗标志
 
 
 /* Forwards. */
@@ -335,11 +348,11 @@ static void handle_alrm( int sig )
     errno = oerrno;
 }
 
-
+/**冲洗打开日志文件*/
 static void re_open_logfile( void )
 {
     FILE* logfp;
-
+	/**没有配置日志文件或者服务器没有初始化的处理*/
     if ( no_log || hs == (httpd_server*) 0 )
 	{
 		return;
@@ -393,7 +406,12 @@ int main( int argc, char** argv )
 	{
 		cp = argv0;
 	}
-	/**打开日志系统*/
+	/**打开日志系统
+	 * cp为固定打印在日志文件中的内容
+	 * LOG_NDELAY设置立即打开
+	 * LOG_PID包括每个消息的PID
+	 * LOG_FACILITY
+	*/
     openlog( cp, LOG_NDELAY|LOG_PID, LOG_FACILITY );
 
     /* Handle command-line arguments. */
@@ -401,10 +419,11 @@ int main( int argc, char** argv )
     parse_args( argc, argv );
 
     /* Read zone info now, in case we chroot(). */
-	/**c语言标准函数*/
+	/**c语言标准函数，设置时区*/
     tzset();
 
     /* Look up hostname now, in case we chroot(). */
+	/***/
     lookup_hostname( &sa4, sizeof(sa4), &gotv4, &sa6, sizeof(sa6), &gotv6 );
     if ( ! ( gotv4 || gotv6 ) )
 	{
@@ -414,6 +433,7 @@ int main( int argc, char** argv )
 	}
 
     /* Throttle file. */
+	/**读取限流设置*/
     numthrottles = 0;
     maxthrottles = 0;
     throttles = (throttletab*) 0;
@@ -425,20 +445,25 @@ int main( int argc, char** argv )
     /* If we're root and we're going to become another user, get the uid/gid
     ** now.
     */
+   /***对于用户id为root用户的处理*/
     if ( getuid() == 0 )
 	{
+		/**获取登录用户信息*/
 		pwd = getpwnam( user );
+		/**对于获取用户信息失败的处理*/
 		if ( pwd == (struct passwd*) 0 )
 	    {
 	    	syslog( LOG_CRIT, "unknown user - '%.80s'", user );
 	    	(void) fprintf( stderr, "%s: unknown user - '%s'\n", argv0, user );
 	    	exit( 1 );
 	    }
+		/**设置uid和gid*/
 		uid = pwd->pw_uid;
 		gid = pwd->pw_gid;
 	}
 
     /* Log file. */
+	/**对于配置了logfile的处理*/
     if ( logfile != (char*) 0 )
 	{
 		if ( strcmp( logfile, "/dev/null" ) == 0 )
@@ -484,7 +509,7 @@ int main( int argc, char** argv )
 	}
 
     /* Switch directories if requested. */
-	
+	/**对于设置工作目录的处理*/
     if ( dir != (char*) 0 )
 	{
 		if ( chdir( dir ) < 0 )
@@ -511,12 +536,13 @@ int main( int argc, char** argv )
 #endif /* USE_USER_DIR */
 
     /* Get current directory. */
+	/**获取当前的路径 */
     (void) getcwd( cwd, sizeof(cwd) - 1 );
     if ( cwd[strlen( cwd ) - 1] != '/' )
 	{
 		(void) strcat( cwd, "/" );
 	}
-
+	/**对于设置为debug状态的处理*/
     if ( ! debug )
 	{
 	/* We're not going to use stdin stdout or stderr from here on, so close
@@ -561,7 +587,7 @@ int main( int argc, char** argv )
         (void) setsid();
 #endif /* HAVE_SETSID */
 	}
-
+	/**对于设置进程文件的处理*/
     if ( pidfile != (char*) 0 )
 	{
 		/* Write the PID file. */
@@ -578,6 +604,7 @@ int main( int argc, char** argv )
     /* Initialize the fdwatch package.  Have to do this before chroot,
     ** if /dev/poll is used.
     */
+   	/**获取支持的最大链接数量*/
     max_connects = fdwatch_get_nfiles();
     if ( max_connects < 0 )
 	{
@@ -1410,11 +1437,14 @@ static void lookup_hostname( httpd_sockaddr* sa4P, size_t sa4_len, int* gotv4P, 
     sa4P->sa.sa_family = AF_INET;
     if ( hostname == (char*) 0 )
 	{
+		/**对于没有设置ip地址的随便找一个值*/
 		sa4P->sa_in.sin_addr.s_addr = htonl( INADDR_ANY );
 	}
     else
 	{
+		/**对于设置主机的IP地址的将主机的IP地址字符型转化为一个32位的值*/
 		sa4P->sa_in.sin_addr.s_addr = inet_addr( hostname );
+		/**对于设置地址错误的处理*/
 		if ( (int) sa4P->sa_in.sin_addr.s_addr == -1 )
 	    {
 	    	he = gethostbyname( hostname );
@@ -1469,6 +1499,9 @@ static void read_throttlefile( char* tf )
 	{
 		/* Nuke comments. */
 		cp = strchr( buf, '#' );
+		/**#号不是此行的第一个参数
+		 * 在此行数据的末尾添加结束符
+		*/
 		if ( cp != (char*) 0 )
 	    {
 			*cp = '\0';
@@ -1487,13 +1520,17 @@ static void read_throttlefile( char* tf )
 			continue;
 		}
 
-		/* Parse line. */
+		/** Parse line.
+		 * 获取三个参数
+		 */
 		if ( sscanf( buf, " %4900[^ \t] %ld-%ld", pattern, &min_limit, &max_limit ) == 3 )
 	    {}
+		/**获取两个参数*/
 		else if ( sscanf( buf, " %4900[^ \t] %ld", pattern, &max_limit ) == 2 )
 	    {
 			min_limit = 0;
 		}
+		/**获取一个参数*/
 		else
 	    {
 	    	syslog( LOG_CRIT,"unparsable line in %.80s - %.80s", tf, buf );
@@ -1512,6 +1549,7 @@ static void read_throttlefile( char* tf )
 		}
 
 		/* Check for room in throttles. */
+		/**对于限流文件的数据大于最大的限流文件的数量的处理*/
 		if ( numthrottles >= maxthrottles )
 	    {
 	    	if ( maxthrottles == 0 )
@@ -1533,13 +1571,14 @@ static void read_throttlefile( char* tf )
 	    }
 
 		/* Add to table. */
+		/**初始化相关的参数*/
 		throttles[numthrottles].pattern = e_strdup( pattern );
 		throttles[numthrottles].max_limit = max_limit;
 		throttles[numthrottles].min_limit = min_limit;
 		throttles[numthrottles].rate = 0;
 		throttles[numthrottles].bytes_since_avg = 0;
 		throttles[numthrottles].num_sending = 0;
-
+		/**更新流量限制数据*/
 		++numthrottles;
 	}
     (void) fclose( fp );
@@ -1688,6 +1727,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 		c->next_free_connect = -1;
 		++num_connects;
 		client_data.p = c;
+		/**设置执行的时间*/
 		c->active_at = tvP->tv_sec;
 		c->wakeup_timer = (Timer*) 0;
 		c->linger_timer = (Timer*) 0;
@@ -1879,7 +1919,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
     fdwatch_add_fd( hc->conn_fd, c, FDW_WRITE );
 }
 
-
+/**回送处理函数函数*/
 static void handle_send( connecttab* c, struct timeval* tvP )
 {
     size_t max_bytes;
@@ -1900,7 +1940,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 	}
 
     /* Do we need to write the headers first? */
-	/**对于hc->responselen的值为0的处理*/
+	/**对于hc->responselen的值为0的处理，即没有数据的处理*/
     if ( hc->responselen == 0 )
 	{
 		/* No, just write the file. */
@@ -1912,15 +1952,17 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 		/* Yes.  We'll combine headers and file into a single writev(),
 		** hoping that this generates a single packet.
 		*/
+		/**一次函数对象*/
 		struct iovec iv[2];
 
 		iv[0].iov_base = hc->response;
 		iv[0].iov_len = hc->responselen;
 		iv[1].iov_base = &(hc->file_address[c->next_byte_index]);
 		iv[1].iov_len = MIN( c->end_byte_index - c->next_byte_index, max_bytes );
+		/**一次写两个数据块的数据*/
 		sz = writev( hc->conn_fd, iv, 2 );
 	}
-	/**对于写数据错误的处理*/
+	/**对于写数据错误的处理但是错误的值为eintr的处理*/
     if ( sz < 0 && errno == EINTR )
 	{
 		return;
@@ -2075,7 +2117,7 @@ static void handle_linger( connecttab* c, struct timeval* tvP )
 	}
 }
 
-/***/
+/**检测流量限制，检测此连接的扩展的文件名是否在流量限制文件中找到匹配项对于有匹配项的设置相关的参数*/
 static int check_throttles( connecttab* c )
 {
     int tnum;
@@ -2085,25 +2127,32 @@ static int check_throttles( connecttab* c )
     c->max_limit = c->min_limit = THROTTLE_NOLIMIT;
     for ( tnum = 0; tnum < numthrottles && c->numtnums < MAXTHROTTLENUMS;++tnum )
 	{
+		/**在流量限制表中找到于扩展文件名匹配的文件*/
 		if ( match( throttles[tnum].pattern, c->hc->expnfilename ) )
 		{
 	    	/* If we're way over the limit, don't even start. */
+			/**匹配项的速率是最大限制的2倍*/
 	    	if ( throttles[tnum].rate > throttles[tnum].max_limit * 2 )
 			{
 				return 0;
 			}
 	    	/* Also don't start if we're under the minimum. */
+			/**速率小于最小限制*/
 	    	if ( throttles[tnum].rate < throttles[tnum].min_limit )
 			{
 				return 0;
 			}
+			/**发送数据小于0*/
 	    	if ( throttles[tnum].num_sending < 0 )
 			{
-			syslog( LOG_ERR, "throttle sending count was negative - shouldn't happen!" );
-			throttles[tnum].num_sending = 0;
+				syslog( LOG_ERR, "throttle sending count was negative - shouldn't happen!" );
+				throttles[tnum].num_sending = 0;
 			}
+			/**设置此连接表的匹配的tnums值*/
 	    	c->tnums[c->numtnums++] = tnum;
+			/**设置此表项的状态为有效状态*/
 	    	++throttles[tnum].num_sending;
+			/**获取设置限制的最大值*/
 	    	l = throttles[tnum].max_limit / throttles[tnum].num_sending;
 	    	if ( c->max_limit == THROTTLE_NOLIMIT )
 			{
@@ -2113,6 +2162,7 @@ static int check_throttles( connecttab* c )
 			{
 				c->max_limit = MIN( c->max_limit, l );
 			}
+			/**设置限制的最小值*/
 	    	l = throttles[tnum].min_limit;
 	    	if ( c->min_limit == THROTTLE_NOLIMIT )
 			{
@@ -2127,7 +2177,7 @@ static int check_throttles( connecttab* c )
     return 1;
 }
 
-
+/**清除流量限制，设置流量限制表中的状态为无效状态*/
 static void clear_throttles( connecttab* c, struct timeval* tvP )
 {
     int tind;
@@ -2138,7 +2188,7 @@ static void clear_throttles( connecttab* c, struct timeval* tvP )
 	}
 }
 
-
+/**更新流量限制*/
 static void update_throttles( ClientData client_data, struct timeval* nowP )
 {
     int tnum, tind;
@@ -2149,6 +2199,7 @@ static void update_throttles( ClientData client_data, struct timeval* nowP )
     /* Update the average sending rate for each throttle.  This is only used
     ** when new connections start up.
     */
+   /** 更新所有流量限制表*/
     for ( tnum = 0; tnum < numthrottles; ++tnum )
 	{
 		throttles[tnum].rate = ( 2 * throttles[tnum].rate + throttles[tnum].bytes_since_avg / THROTTLE_TIME ) / 3;
@@ -2174,6 +2225,7 @@ static void update_throttles( ClientData client_data, struct timeval* nowP )
     /* Now update the sending rate on all the currently-sending connections,
     ** redistributing it evenly.
     */
+   	/**设置每个连接表的浏览限制状态*/
     for ( cnum = 0; cnum < max_connects; ++cnum )
 	{
 		c = &connects[cnum];
@@ -2197,7 +2249,7 @@ static void update_throttles( ClientData client_data, struct timeval* nowP )
 	}
 }
 
-
+/**结束连接*/
 static void finish_connection( connecttab* c, struct timeval* tvP )
 {
     /* If we haven't actually sent the buffered response yet, do so now. */
@@ -2238,7 +2290,7 @@ static void clear_connection( connecttab* c, struct timeval* tvP )
 		c->linger_timer = (Timer*) 0;
 		c->hc->should_linger = 0;
 	}
-	/***/
+	/**对于应该处于异常状态的*/
     if ( c->hc->should_linger )
 	{
 		/**对于连接状态不为暂停的处理
@@ -2322,7 +2374,7 @@ static void idle( ClientData client_data, struct timeval* nowP )
 	}
 }
 
-
+/**连接唤醒*/
 static void wakeup_connection( ClientData client_data, struct timeval* nowP )
 {
     connecttab* c;
@@ -2335,7 +2387,7 @@ static void wakeup_connection( ClientData client_data, struct timeval* nowP )
 		fdwatch_add_fd( c->hc->conn_fd, c, FDW_WRITE );
 	}
 }
-
+/**清除异常连接*/
 static void linger_clear_connection( ClientData client_data, struct timeval* nowP )
 {
     connecttab* c;

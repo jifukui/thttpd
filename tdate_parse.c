@@ -49,10 +49,9 @@ struct strlong {
     };
 
 
-static void
-pound_case( char* str )
-    {
-    for ( ; *str != '\0'; ++str )
+static void pound_case( char* str )
+{
+	for ( ; *str != '\0'; ++str )
 	{
 	if ( isupper( (int) *str ) )
 	    *str = tolower( (int) *str );
@@ -60,8 +59,7 @@ pound_case( char* str )
     }
 
 
-static int
-strlong_compare( const void* v1, const void* v2 )
+static int strlong_compare( const void* v1, const void* v2 )
     {
     const struct strlong* s1 = (const struct strlong*) v1;
     const struct strlong* s2 = (const struct strlong*) v2;
@@ -69,8 +67,7 @@ strlong_compare( const void* v1, const void* v2 )
     }
 
 
-static int
-strlong_search( char* str, struct strlong* tab, int n, long* lP )
+static int strlong_search( char* str, struct strlong* tab, int n, long* lP )
     {
     int i, h, l, r;
 
@@ -95,8 +92,7 @@ strlong_search( char* str, struct strlong* tab, int n, long* lP )
     }
 
 
-static int
-scan_wday( char* str_wday, long* tm_wdayP )
+static int scan_wday( char* str_wday, long* tm_wdayP )
     {
     static struct strlong wday_tab[] = {
 	{ "sun", 0 }, { "sunday", 0 },
@@ -122,8 +118,7 @@ scan_wday( char* str_wday, long* tm_wdayP )
     }
 
 
-static int
-scan_mon( char* str_mon, long* tm_monP )
+static int scan_mon( char* str_mon, long* tm_monP )
     {
     static struct strlong mon_tab[] = {
 	{ "jan", 0 }, { "january", 0 },
@@ -154,16 +149,14 @@ scan_mon( char* str_mon, long* tm_monP )
     }
 
 
-static int
-is_leap( int year )
+static int is_leap( int year )
     {
     return year % 400? ( year % 100 ? ( year % 4 ? 0 : 1 ) : 0 ) : 1;
     }
 
 
 /* Basically the same as mktime(). */
-static time_t
-tm_to_time( struct tm* tmP )
+static time_t tm_to_time( struct tm* tmP )
     {
     time_t t;
     static int monthtab[12] = {
@@ -189,8 +182,7 @@ tm_to_time( struct tm* tmP )
     }
 
 
-time_t
-tdate_parse( char* str )
+time_t tdate_parse( char* str )
     {
     struct tm tm;
     char* cp;
