@@ -73,17 +73,17 @@
 #endif /* !FD_SET */
 #endif /* HAVE_SELECT */
 
-static int nfiles;                  //最大支持的文件的数量
-static long nwatches;           
-static int* fd_rw;                  //
-static void** fd_data;              //
-static int nreturned;               //
+static int nfiles;                  //最大支持监听的文件的数量
+static long nwatches;               //监听的文件的数量
+static int* fd_rw;                  //文件描述符的读写状态
+static void** fd_data;              //读写文件描述符的数据
+static int nreturned;               //当前可以使用的文件描述符的数量
 static int next_ridx;               //下一个需要读取的文件描述符的索引值
 
 #ifdef HAVE_KQUEUE
 
 #define WHICH                  "kevent"
-#define INIT( nf )         kqueue_init( nf )
+#define INIT( nf )             kqueue_init( nf )
 #define ADD_FD( fd, rw )       kqueue_add_fd( fd, rw )
 #define DEL_FD( fd )           kqueue_del_fd( fd )
 #define WATCH( timeout_msecs ) kqueue_watch( timeout_msecs )
@@ -101,7 +101,7 @@ static int kqueue_get_fd( int ridx );
 # ifdef HAVE_DEVPOLL
 
 #define WHICH                  "devpoll"
-#define INIT( nf )         devpoll_init( nf )
+#define INIT( nf )             devpoll_init( nf )
 #define ADD_FD( fd, rw )       devpoll_add_fd( fd, rw )
 #define DEL_FD( fd )           devpoll_del_fd( fd )
 #define WATCH( timeout_msecs ) devpoll_watch( timeout_msecs )
@@ -119,7 +119,7 @@ static int devpoll_get_fd( int ridx );
 #  ifdef HAVE_POLL
 
 #define WHICH                  "poll"
-#define INIT( nf )         poll_init( nf )
+#define INIT( nf )             poll_init( nf )
 #define ADD_FD( fd, rw )       poll_add_fd( fd, rw )
 #define DEL_FD( fd )           poll_del_fd( fd )
 #define WATCH( timeout_msecs ) poll_watch( timeout_msecs )
@@ -137,7 +137,7 @@ static int poll_get_fd( int ridx );
 #   ifdef HAVE_SELECT
 
 #define WHICH                  "select"
-#define INIT( nf )         select_init( nf )
+#define INIT( nf )             select_init( nf )
 #define ADD_FD( fd, rw )       select_add_fd( fd, rw )
 #define DEL_FD( fd )           select_del_fd( fd )
 #define WATCH( timeout_msecs ) select_watch( timeout_msecs )
@@ -170,9 +170,11 @@ int fdwatch_get_nfiles( void )
 #endif /* RLIMIT_NOFILE */
 
     /* Figure out how many fd's we can have. */
+    /**进程最多可以打开文件描述符的数量 */
     nfiles = getdtablesize();
 #ifdef RLIMIT_NOFILE
     /* If we have getrlimit(), use that, and attempt to raise the limit. */
+    /** 最大可以打开文件描述符的数量 */
     if ( getrlimit( RLIMIT_NOFILE, &rl ) == 0 )
 	{
 	    nfiles = rl.rlim_cur;
@@ -193,10 +195,16 @@ int fdwatch_get_nfiles( void )
 
 #if defined(HAVE_SELECT) && ! ( defined(HAVE_POLL) || defined(HAVE_DEVPOLL) || defined(HAVE_KQUEUE) )
     /* If we use select(), then we must limit ourselves to FD_SETSIZE. */
+    /** 确定可以打开的文件描述符的数量 */
     nfiles = MIN( nfiles, FD_SETSIZE );
 #endif /* HAVE_SELECT && ! ( HAVE_POLL || HAVE_DEVPOLL || HAVE_KQUEUE ) */
 
     /* Initialize the fdwatch data structures. */
+    /** 初始化
+     * 当前监视的文件描述符的数量
+     * 当前监视的文件描述符的读写状态
+     * 当前监视的文件描述符的数据
+     */
     nwatches = 0;
     fd_rw = (int*) malloc( sizeof(int) * nfiles );
     fd_data = (void**) malloc( sizeof(void*) * nfiles );
@@ -204,10 +212,12 @@ int fdwatch_get_nfiles( void )
 	{
         return -1;
     }
+    /** 初始化所有文件描述符的读写状态为-1 */
     for ( i = 0; i < nfiles; ++i )
 	{
         fd_rw[i] = -1;
     }
+    /** 初始化 */
     if ( INIT( nfiles ) == -1 )
 	{
         return -1;
@@ -322,7 +332,7 @@ static int kq;
 
 static int
 kqueue_init( int nf )
-    {
+{
     kq = kqueue();
     if ( kq == -1 )
 	return -1;
@@ -336,7 +346,7 @@ kqueue_init( int nf )
     (void) memset( kqevents, 0, sizeof(struct kevent) * maxkqevents );
     (void) memset( kqrfdidx, 0, sizeof(int) * nf );
     return 0;
-    }
+}
 
 
 static void
@@ -573,36 +583,37 @@ devpoll_get_fd( int ridx )
 
 #  ifdef HAVE_POLL
 
-static struct pollfd* pollfds;
-static int npoll_fds;
-static int* poll_fdidx;
-static int* poll_rfdidx;
+static struct pollfd* pollfds;              /**poll数组*/
+static int npoll_fds;                       /**指向数组的尾端*/
+static int* poll_fdidx;                     /**存储文件描述符的数组*/
+static int* poll_rfdidx;                    /**存储可以进行处理的文件描述符数组*/
 
 
-static int
-poll_init( int nf )
-    {
+static int poll_init( int nf )
+{
     int i;
 
     pollfds = (struct pollfd*) malloc( sizeof(struct pollfd) * nf );
     poll_fdidx = (int*) malloc( sizeof(int) * nf );
     poll_rfdidx = (int*) malloc( sizeof(int) * nf );
-    if ( pollfds == (struct pollfd*) 0 || poll_fdidx == (int*) 0 ||
-	 poll_rfdidx == (int*) 0 )
-	return -1;
-    for ( i = 0; i < nf; ++i )
-	pollfds[i].fd = poll_fdidx[i] = -1;
-    return 0;
+    if ( pollfds == (struct pollfd*) 0 || poll_fdidx == (int*) 0 ||poll_rfdidx == (int*) 0 )
+	{
+        return -1;
     }
+    for ( i = 0; i < nf; ++i )
+	{
+        pollfds[i].fd = poll_fdidx[i] = -1;
+    }
+    return 0;
+}
 
 
-static void
-poll_add_fd( int fd, int rw )
-    {
+static void poll_add_fd( int fd, int rw )
+{
     if ( npoll_fds >= nfiles )
 	{
-	syslog( LOG_ERR, "too many fds in poll_add_fd!" );
-	return;
+	    syslog( LOG_ERR, "too many fds in poll_add_fd!" );
+	    return;
 	}
     pollfds[npoll_fds].fd = fd;
     switch ( rw )
@@ -613,81 +624,86 @@ poll_add_fd( int fd, int rw )
 	}
     poll_fdidx[fd] = npoll_fds;
     ++npoll_fds;
-    }
+}
 
 
-static void
-poll_del_fd( int fd )
-    {
+static void poll_del_fd( int fd )
+{
     int idx = poll_fdidx[fd];
 
     if ( idx < 0 || idx >= nfiles )
 	{
-	syslog( LOG_ERR, "bad idx (%d) in poll_del_fd!", idx );
-	return;
+	    syslog( LOG_ERR, "bad idx (%d) in poll_del_fd!", idx );
+	    return;
 	}
     --npoll_fds;
     pollfds[idx] = pollfds[npoll_fds];
     poll_fdidx[pollfds[idx].fd] = idx;
     pollfds[npoll_fds].fd = -1;
     poll_fdidx[fd] = -1;
-    }
+}
 
 
-static int
-poll_watch( long timeout_msecs )
-    {
+static int poll_watch( long timeout_msecs )
+{
     int r, ridx, i;
-
+    /**
+     * pollfds:pollfd结构数组
+     * npoll_fds:数组元素的数量
+     * timeout_msecs：poll函数调用阻塞的时间
+    */
     r = poll( pollfds, npoll_fds, (int) timeout_msecs );
     if ( r <= 0 )
-	return r;
-
+	{
+        return r;
+    }
     ridx = 0;
     for ( i = 0; i < npoll_fds; ++i )
-	if ( pollfds[i].revents &
-	     ( POLLIN | POLLOUT | POLLERR | POLLHUP | POLLNVAL ) )
+	{
+        if ( pollfds[i].revents &( POLLIN | POLLOUT | POLLERR | POLLHUP | POLLNVAL ) )
 	    {
-	    poll_rfdidx[ridx++] = pollfds[i].fd;
-	    if ( ridx == r )
-		break;
+	        poll_rfdidx[ridx++] = pollfds[i].fd;
+	        if ( ridx == r )
+            {
+                break;
+            }
 	    }
-
-    return ridx;	/* should be equal to r */
     }
+    return ridx;	/* should be equal to r */
+}
 
 
-static int
-poll_check_fd( int fd )
-    {
+static int poll_check_fd( int fd )
+{
     int fdidx = poll_fdidx[fd];
 
     if ( fdidx < 0 || fdidx >= nfiles )
 	{
-	syslog( LOG_ERR, "bad fdidx (%d) in poll_check_fd!", fdidx );
-	return 0;
+	    syslog( LOG_ERR, "bad fdidx (%d) in poll_check_fd!", fdidx );
+	    return 0;
 	}
     if ( pollfds[fdidx].revents & POLLERR )
-	return 0;
+	{
+        return 0;
+    }
     switch ( fd_rw[fd] )
 	{
 	case FDW_READ: return pollfds[fdidx].revents & ( POLLIN | POLLHUP | POLLNVAL );
 	case FDW_WRITE: return pollfds[fdidx].revents & ( POLLOUT | POLLHUP | POLLNVAL );
 	default: return 0;
 	}
-    }
+}
 
 
-static int
-poll_get_fd( int ridx )
-    {
+static int poll_get_fd( int ridx )
+{
     if ( ridx < 0 || ridx >= nfiles )
 	{
-	syslog( LOG_ERR, "bad ridx (%d) in poll_get_fd!", ridx );
-	return -1;
+    	syslog( LOG_ERR, "bad ridx (%d) in poll_get_fd!", ridx );
+	    return -1;
 	}
     return poll_rfdidx[ridx];
-    }
+}
 
 #  else /* HAVE_POLL */
 

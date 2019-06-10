@@ -78,28 +78,30 @@ typedef long long int64_t;
 
 /* The Map struct. */
 typedef struct MapStruct {
-    ino_t ino;
-    dev_t dev;
-    off_t size;
-    time_t ct;
-    int refcount;
-    time_t reftime;
-    void* addr;
-    unsigned int hash;
-    int hash_idx;
-    struct MapStruct* next;
+    ino_t ino;						/**文件索引节点号*/
+    dev_t dev;						/**文件使用的设备号*/
+    off_t size;						/**文件大小*/
+    time_t ct;						/**文件最后一次修改时间*/
+    int refcount;					/**引用次数*/
+    time_t reftime;					/**引用时间*/
+    void* addr;						/**地址*/
+    unsigned int hash;				/**hash值*/
+    int hash_idx;					/**hash索引值*/
+    struct MapStruct* next;			/**下一个指针*/
 } Map;
 
 
 /* Globals. */
-static Map* maps = (Map*) 0;
-static Map* free_maps = (Map*) 0;
-static int alloc_count = 0, map_count = 0, free_count = 0;
-static Map** hash_table = (Map**) 0;
-static int hash_size;
-static unsigned int hash_mask;
-static time_t expire_age = DEFAULT_EXPIRE_AGE;
-static off_t mapped_bytes = 0;
+static Map* maps = (Map*) 0;							/**映射的地址*/
+static Map* free_maps = (Map*) 0;						/**释放映射的地址*/
+static int alloc_count = 0;								/**申请内存的数量*/
+static int map_count = 0;								/**映射的数量*/
+static int free_count = 0;								/**空闲的数量*/
+static Map** hash_table = (Map**) 0;					/**映射表*/
+static int hash_size;									/**hash表的大小*/
+static unsigned int hash_mask;							/**hash表的掩码*/
+static time_t expire_age = DEFAULT_EXPIRE_AGE;			/**雇佣时间*/
+static off_t mapped_bytes = 0;							/**映射的字节数*/
 
 
 
@@ -111,7 +113,11 @@ static int add_hash( Map* m );
 static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct );
 
-/**内存映射*/
+/**内存映射
+ * filename文件名称
+ * sbP文件属性
+ * nowP当前时间
+*/
 void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 {
     time_t now;
@@ -197,10 +203,10 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
 	}
 
     /* Fill in the Map entry. */
-    m->ino = sb.st_ino;			//
-    m->dev = sb.st_dev;			//
+    m->ino = sb.st_ino;			//文件索引节点号
+    m->dev = sb.st_dev;			//文件使用的设备号
     m->size = sb.st_size;		//文件大小信息
-    m->ct = sb.st_ctime;		//文件
+    m->ct = sb.st_ctime;		//文件最后一次修改时间
     m->refcount = 1;			//设置文件的引用数量
     m->reftime = now;			//设置文件的引用时间
 
@@ -296,7 +302,7 @@ void* mmc_map( char* filename, struct stat* sbP, struct timeval* nowP )
     return m->addr;
 }
 
-
+/***/
 void mmc_unmap( void* addr, struct stat* sbP, struct timeval* nowP )
 {
     Map* m = (Map*) 0;
@@ -355,7 +361,7 @@ void mmc_unmap( void* addr, struct stat* sbP, struct timeval* nowP )
 	}
 }
 
-
+/**定时清除引用值为0且超过雇佣时间的文件映射的内存*/
 void mmc_cleanup( struct timeval* nowP )
 {
     time_t now;
@@ -467,7 +473,7 @@ static void really_unmap( Map** mm )
     hash_table[m->hash_idx] = (Map*) 0;
 }
 
-
+/**释放hash申请的内存空间*/
 void mmc_term( void )
 {
     Map* m;
@@ -515,11 +521,9 @@ static int check_hash_size( void )
 		/* No, got to expand. */
 		free( (void*) hash_table );
 		/* Double the hash size until it's big enough. */
-		do
-	    {
+		do{
 	    	hash_size = hash_size << 1;
-	    }
-		while ( hash_size < map_count * 6 );
+	    }while ( hash_size < map_count * 6 );
 		hash_mask = hash_size - 1;
 	}
     /* Make the new table. */
@@ -544,11 +548,11 @@ static int check_hash_size( void )
     return 0;
 }
 
-
+/** 向hash表中添加数据*/
 static int add_hash( Map* m )
 {
     unsigned int h, he, i;
-
+	/**计算hash值*/
     h = hash( m->ino, m->dev, m->size, m->ct );
     he = ( h + hash_size - 1 ) & hash_mask;
     for ( i = h; ; i = ( i + 1 ) & hash_mask )
@@ -568,14 +572,21 @@ static int add_hash( Map* m )
     return -1;
 }
 
-/***/
+/**根据传入的信息计算hash值返回在hash表中寻找的结果
+ * ino:文件索引号
+ * dev：文件使用的设备号
+ * size：文件大小
+ * ct：最后一次改变文件状态的时间
+*/
 static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct )
 {
     unsigned int h, he, i;
     Map* m;
-
+	/**根据文件信息计算文件的hash值*/
     h = hash( ino, dev, size, ct );
+	/***/
     he = ( h + hash_size - 1 ) & hash_mask;
+	/***/
     for ( i = h; ; i = ( i + 1 ) & hash_mask )
 	{
 		m = hash_table[i];
@@ -595,7 +606,12 @@ static Map* find_hash( ino_t ino, dev_t dev, off_t size, time_t ct )
     return (Map*) 0;
 }
 
-/**根据传入的数据计算hash值*/
+/**根据传入的数据计算hash值
+ * ino:文件索引号
+ * dev：文件使用的设备号
+ * size：文件大小
+ * ct：最后一次改变文件状态的时间
+*/
 static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct )
 {
     unsigned int h = 177573;
@@ -613,12 +629,12 @@ static unsigned int hash( ino_t ino, dev_t dev, off_t size, time_t ct )
 
 
 /* Generate debugging statistics syslog message. */
+/**打印内存映射状态信息*/
 void mmc_logstats( long secs )
 {
     syslog(
 	LOG_NOTICE, "  map cache - %d allocated, %d active (%lld bytes), %d free; hash size: %d; expire age: %lld",
-	alloc_count, map_count, (long long) mapped_bytes, free_count, hash_size,
-	(long long) expire_age );
+	alloc_count, map_count, (long long) mapped_bytes, free_count, hash_size,(long long) expire_age );
     if ( map_count + free_count != alloc_count )
 	{
 		syslog( LOG_ERR, "map counts don't add up!" );
