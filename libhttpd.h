@@ -61,8 +61,8 @@
 /* A multi-family sockaddr. */
 /**http地址联合体*/
 typedef union {
-    struct sockaddr sa;
-    struct sockaddr_in sa_in;
+    struct sockaddr sa;             //IP地址类型
+    struct sockaddr_in sa_in;       //IP地址
 #ifdef USE_IPV6
     struct sockaddr_in6 sa_in6;
     struct sockaddr_storage sa_stor;

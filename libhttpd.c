@@ -837,9 +837,7 @@ static void defang( char* str, char* dfstr, int dfsize )
     char* cp1;
     char* cp2;
 
-    for ( cp1 = str, cp2 = dfstr;
-	  *cp1 != '\0' && cp2 - dfstr < dfsize - 5;
-	  ++cp1, ++cp2 )
+    for ( cp1 = str, cp2 = dfstr;*cp1 != '\0' && cp2 - dfstr < dfsize - 5;++cp1, ++cp2 )
 	{
 		switch ( *cp1 )
 	    {
@@ -941,8 +939,7 @@ static void send_authenticate( httpd_conn* hc, char* realm )
     static size_t maxheader = 0;
     static char headstr[] = "WWW-Authenticate: Basic realm=\"";
 
-    httpd_realloc_str(
-	&header, &maxheader, sizeof(headstr) + strlen( realm ) + 3 );
+    httpd_realloc_str(&header, &maxheader, sizeof(headstr) + strlen( realm ) + 3 );
     (void) my_snprintf( header, maxheader, "%s%s\"\015\012", headstr, realm );
     httpd_send_err( hc, 401, err401title, header, err401form, hc->encodedurl );
     /* If the request was a POST then there might still be data to be read,
@@ -1098,6 +1095,7 @@ static int auth_check2( httpd_conn* hc, char* dirname  )
     (void) my_snprintf( authpath, maxauthpath, "%s/%s", dirname, AUTH_FILE );
 
     /* Does this directory have an auth file? */
+	/**密码文件不存在 */
     if ( stat( authpath, &sb ) < 0 )
 	/* Nope, let the request go through. */
 	{
@@ -1105,6 +1103,7 @@ static int auth_check2( httpd_conn* hc, char* dirname  )
 	}
 
     /* Does this request contain basic authorization info? */
+	/**认证失败 */
     if ( hc->authorization[0] == '\0' ||strncmp( hc->authorization, "Basic ", 6 ) != 0 )
 	{
 		/* Nope, return a 401 Unauthorized. */
@@ -2653,6 +2652,7 @@ static void de_dotdot( char* file )
 
     /* Collapse any multiple / sequences. */
 	/**判断file中是否存在//符号的处理
+	 * 剔除文件字符串中的//
 	 * 第三个字符为/
 	*/
     while ( ( cp = strstr( file, "//") ) != (char*) 0 )
