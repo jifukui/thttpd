@@ -147,8 +147,9 @@ static int httpd_conn_count;			/**http连接的数量*/
 
 /**初始化全局静态对象http服务器*/
 static httpd_server* hs = (httpd_server*) 0;
-int terminate = 0;
-time_t start_time, stats_time;
+int terminate = 0;								//服务器暂停标记
+time_t start_time;
+time_t stats_time;
 long stats_connections;
 off_t stats_bytes;
 int stats_simultaneous;

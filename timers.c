@@ -267,7 +267,7 @@ long tmr_mstimeout( struct timeval* nowP )
     return msecs;
 }
 
-
+/**处理时间hash表中超时的时间处理程序根据是否重新加载标志将此时间处理程序进行重新加载还是删除 */
 void tmr_run( struct timeval* nowP )
 {
     int h;

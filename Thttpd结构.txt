@@ -205,3 +205,12 @@ mmc.h
 tdate_parse.h  
 timers.h  
 version.h
+
+
+
+
+
+
+程序调用流程：
+连接：
+handle_newconnect
