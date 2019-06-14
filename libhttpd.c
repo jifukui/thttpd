@@ -1911,7 +1911,9 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 ** have checked so far; and hc->checked_state is the current state of the
 ** finite state machine.
 */
-/**获取Http请求的第一行并判断是否正确*/
+/**获取Http请求的第一行并判断是否正确
+ * 判断请求的格式是否正确
+*/
 int httpd_got_request( httpd_conn* hc )
 {
     char c;
@@ -2152,12 +2154,15 @@ int httpd_parse_request( httpd_conn* hc )
 	/**对于路径是完整的http协议路径的处理*/
     if ( strncasecmp( url, "http://", 7 ) == 0 )
 	{
+		/**对于不是HTTP1.1的处理 */
 		if ( ! hc->one_one )
 	    {
 	    	httpd_send_err( hc, 400, httpd_err400title, "", httpd_err400form, "" );
 	    	return -1;
 	    }
+		/**设置reqhost的值为url后面的7个字符 */
 		reqhost = url + 7;
+		/**设置url的地址为reqhost字符串中第一个/符所在的位置 */
 		url = strchr( reqhost, '/' );
 		if ( url == (char*) 0 )
 	    {
@@ -2172,6 +2177,7 @@ int httpd_parse_request( httpd_conn* hc )
 	    }
 		httpd_realloc_str( &hc->reqhost, &hc->maxreqhost, strlen( reqhost ) );
 		(void) strcpy( hc->reqhost, reqhost );
+		/**修改url的相关字段 */
 		*url = '/';
 	}
 	/**对于文件路径不是从根路径开始的处理*/

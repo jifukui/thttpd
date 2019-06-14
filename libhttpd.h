@@ -101,12 +101,12 @@ typedef struct {
     httpd_server* hs;               //http服务器结构对象
     httpd_sockaddr client_addr;     //http客户端地址信息
     char* read_buf;                 //读取的数据存放的位置
-    size_t read_size;               //读取数据的数据空间
+    size_t read_size;               //读取数据的数据空间大小
     size_t read_idx;                //当前读取数据的索引值
     size_t checked_idx;             //当前处理的索引值
-    int checked_state;              //
+    int checked_state;              //处理请求行的状态标志
     int method;                     //请求方式
-    int status;                     //
+    int status;                     //http处理状态码
     off_t bytes_to_send;            //需要发送数据的数量
     off_t bytes_sent;               //已经发送数据的数量
     char* encodedurl;               //原始的编码的url
@@ -153,13 +153,13 @@ typedef struct {
     char* type;                     /* not malloc()ed */             
     char* hostname;	                /* not malloc()ed */        
     int mime_flag;                  //mime标志
-    int one_one;	                /* HTTP/1.1 or better */
-    int got_range;                  //
+    int one_one;	                /* 是否是HTTP1.1之后的 协议标志位 */
+    int got_range;                  //用户请求是否定义Range
     int tildemapped;	            /* this connection got tilde-mapped */
-    off_t first_byte_index;         //
-    off_t last_byte_index;          //
-    int keep_alive;                 //
-    int should_linger;              //
+    off_t first_byte_index;         //发送数据的第一个字节的位置
+    off_t last_byte_index;          //发送数据的最后一个字节的位置
+    int keep_alive;                 //是否保持连接状态标记
+    int should_linger;              //延迟关闭状态标记
     struct stat sb;                 //文件状态值
     int conn_fd;                    //连接的文件描述符
     char* file_address;             //映射的文件的内存地址

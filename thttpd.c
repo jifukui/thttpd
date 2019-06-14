@@ -98,12 +98,13 @@ static int max_age;
  * max_limit：最大流量限制
  * min_limit：最小流量限制
  * rate：速率限制
- * bytes_since_avg
+ * bytes_since_avg:
  * num_sending
 */
 typedef struct {
     char* pattern;
-    long max_limit, min_limit;
+    long max_limit;
+	long min_limit;
     long rate;
     off_t bytes_since_avg;
     int num_sending;
@@ -123,8 +124,8 @@ typedef struct {
     int numtnums;						/***/
     long max_limit;						/**最大限制*/
 	long min_limit;						/**最小限制*/
-    time_t started_at;					/**开始位置*/
-	time_t active_at;					/**可用位置*/
+    time_t started_at;					/**开始时间*/
+	time_t active_at;					/**处理时的时间*/
     Timer* wakeup_timer;				/**唤醒时间*/
     Timer* linger_timer;				/**异常时间*/	
     long wouldblock_delay;				/***/
@@ -1873,6 +1874,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 	/**对于定义range的处理*/
     if ( hc->got_range )
 	{
+		/**设置发送数据的起始位置和结束位置 */
 		c->next_byte_index = hc->first_byte_index;
 		c->end_byte_index = hc->last_byte_index + 1;
 	}
