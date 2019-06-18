@@ -1325,6 +1325,9 @@ static void strencode( char* to, int tosize, char* from )
 
 #ifdef TILDE_MAP_1
 /* Map a ~username/whatever URL into <prefix>/username. */
+/**
+ * 设置hc->expnfilename的值为TILDE_MAP_1/hc->expnfilename
+ */
 static int tilde_map_1( httpd_conn* hc )
 {
     static char* temp;
@@ -1335,8 +1338,7 @@ static int tilde_map_1( httpd_conn* hc )
     len = strlen( hc->expnfilename ) - 1;
     httpd_realloc_str( &temp, &maxtemp, len );
     (void) strcpy( temp, &hc->expnfilename[1] );
-    httpd_realloc_str(
-	&hc->expnfilename, &hc->maxexpnfilename, strlen( prefix ) + 1 + len );
+    httpd_realloc_str(&hc->expnfilename, &hc->maxexpnfilename, strlen( prefix ) + 1 + len );
     (void) strcpy( hc->expnfilename, prefix );
     if ( prefix[0] != '\0' )
 	{
@@ -1349,6 +1351,9 @@ static int tilde_map_1( httpd_conn* hc )
 
 #ifdef TILDE_MAP_2
 /* Map a ~username/whatever URL into <user's homedir>/<postfix>. */
+/**
+ * 
+ */
 static int tilde_map_2( httpd_conn* hc )
 {
     static char* temp;
@@ -1373,7 +1378,9 @@ static int tilde_map_2( httpd_conn* hc )
 	}
 
     /* Get the passwd entry. */
+	/**获取用户登录信息 */
     pw = getpwnam( temp );
+	/**获取用户信息失败 */
     if ( pw == (struct passwd*) 0 )
 	{
 		return 0;
@@ -1518,15 +1525,25 @@ static int vhost_map( httpd_conn* hc )
 ** This is a fairly nice little routine.  It handles any size filenames
 ** without excessive mallocs.
 */
-/***/
+/**
+ * path:为路径
+ * resP：为
+ * no_symlink_check：为是否
+*/
 static char* expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped )
 {
     static char* checked;
     static char* rest;
     char lnk[5000];
-    static size_t maxchecked = 0, maxrest = 0;
-    size_t checkedlen, restlen, linklen, prevcheckedlen, prevrestlen;
-    int nlinks, i;
+    static size_t maxchecked = 0;
+	static size_t maxrest = 0;
+    size_t checkedlen;
+	size_t restlen;
+	size_t linklen;
+	size_t prevcheckedlen;
+	size_t prevrestlen;
+    int nlinks;
+	int i;
     char* r;
     char* cp1;
     char* cp2;
@@ -1546,12 +1563,16 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 	** URL for the CGI instead of a local symlinked one.
 	*/
 		struct stat sb;
+		/**判断获取文件属性成功 */
 		if ( stat( path, &sb ) != -1 )
 	    {
+			/**获取路径的长度 */
 	    	checkedlen = strlen( path );
 	    	httpd_realloc_str( &checked, &maxchecked, checkedlen );
+			/**将路径信息拷贝到checked中 */
 	    	(void) strcpy( checked, path );
 	    	/* Trim trailing slashes. */
+			/**去掉最后的'/'字符 */
 	    	while ( checked[checkedlen - 1] == '/' )
 			{
 				checked[checkedlen - 1] = '\0';
@@ -1575,6 +1596,7 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 	{
 		rest[--restlen] = '\0';         /* trim trailing slash */
 	}
+	/**去掉前面的'/'字符 */
     if ( ! tildemapped )
 	{
 		/* Remove any leading slashes. */
@@ -1685,6 +1707,7 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 		{
 			continue;
 		}
+		/**获取当前路径 */
 		linklen = readlink( checked, lnk, sizeof(lnk) - 1 );
 		if ( linklen == -1 )
 		{
@@ -2162,7 +2185,7 @@ int httpd_parse_request( httpd_conn* hc )
 	    }
 		/**设置reqhost的值为url后面的7个字符 */
 		reqhost = url + 7;
-		/**设置url的地址为reqhost字符串中第一个/符所在的位置 */
+		/**判断出去http://字符后面是否还存在'/'字符对于不存在的退出*/
 		url = strchr( reqhost, '/' );
 		if ( url == (char*) 0 )
 	    {
@@ -2528,7 +2551,7 @@ int httpd_parse_request( httpd_conn* hc )
     (void) strcpy( hc->expnfilename, hc->origfilename );
 
     /* Tilde mapping. */
-	/**对于文件米的第一个字符为~的处理*/
+	/**对于文件名的第一个字符为~的处理*/
     if ( hc->expnfilename[0] == '~' )
 	{
 #ifdef TILDE_MAP_1

@@ -152,7 +152,7 @@ typedef struct {
     size_t contentlength;           //
     char* type;                     /* not malloc()ed */             
     char* hostname;	                /* not malloc()ed */        
-    int mime_flag;                  //mime标志
+    int mime_flag;                  //对于HTTP1.1需要处理请求首部的标志
     int one_one;	                /* 是否是HTTP1.1之后的 协议标志位 */
     int got_range;                  //用户请求是否定义Range
     int tildemapped;	            /* this connection got tilde-mapped */
