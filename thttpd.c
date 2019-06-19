@@ -995,31 +995,37 @@ static void parse_args( int argc, char** argv )
     argn = 1;
     while ( argn < argc && argv[argn][0] == '-' )
 	{
+		/**获取版本信息 */
 		if ( strcmp( argv[argn], "-V" ) == 0 )
 	    {
 	    	(void) printf( "%s\n", SERVER_SOFTWARE );
 	    	exit( 0 );
 	    }
+		/**读取配置文件 */
 		else if ( strcmp( argv[argn], "-C" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	read_config( argv[argn] );
 	    }
+		/**设置监听的端口号 */
 		else if ( strcmp( argv[argn], "-p" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	port = (unsigned short) atoi( argv[argn] );
 	    }
+		/**设置工作目录 */
 		else if ( strcmp( argv[argn], "-d" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	dir = argv[argn];
 	    }
+		/**设置是否切换到根目录 */
 		else if ( strcmp( argv[argn], "-r" ) == 0 )
 	    {
 	    	do_chroot = 1;
 	    	no_symlink_check = 1;
 	    }
+		/**设置不切换到根目录 */
 		else if ( strcmp( argv[argn], "-nor" ) == 0 )
 	    {
 	    	do_chroot = 0;
@@ -1030,79 +1036,96 @@ static void parse_args( int argc, char** argv )
 	    	++argn;
 	    	data_dir = argv[argn];
 	    }
+		/**设置进行符号连接检测 */
 		else if ( strcmp( argv[argn], "-s" ) == 0 )
 	    {
 			no_symlink_check = 0;
 		}
+		/**设置不进行符号连接检测 */
 		else if ( strcmp( argv[argn], "-nos" ) == 0 )
 	    {
 			no_symlink_check = 1;
 		}
+		/**设置用户 */
 		else if ( strcmp( argv[argn], "-u" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	user = argv[argn];
 	    }
+		/**设置CGI的路径 */
 		else if ( strcmp( argv[argn], "-c" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	cgi_pattern = argv[argn];
 	    }
+		/**设置限流文件 */
 		else if ( strcmp( argv[argn], "-t" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	throttlefile = argv[argn];
 	    }
+		/**设置主机名称 */
 		else if ( strcmp( argv[argn], "-h" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	hostname = argv[argn];
 	    }
+		/**设置日志文件的名称 */
 		else if ( strcmp( argv[argn], "-l" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	logfile = argv[argn];
 	    }
+		/**设置使用虚拟主机 */
 		else if ( strcmp( argv[argn], "-v" ) == 0 )
 	    {
 			do_vhost = 1;
 		}
+		/**设置不使用虚拟主机 */
 		else if ( strcmp( argv[argn], "-nov" ) == 0 )
 	    {
 			do_vhost = 0;
 		}
+		/**设置使用全局的密码 */
 		else if ( strcmp( argv[argn], "-g" ) == 0 )
 	    {
 			do_global_passwd = 1;
 		}
+		/**设置使用全局的密码 */
 		else if ( strcmp( argv[argn], "-nog" ) == 0 )
 	    {
 			do_global_passwd = 0;
 		}
+		/**设置 */
 		else if ( strcmp( argv[argn], "-i" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	pidfile = argv[argn];
 	    }
+		/**设置字符集 */
 		else if ( strcmp( argv[argn], "-T" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	charset = argv[argn];
 	    }
+		/**设置使用在线隐私平台技术 */
 		else if ( strcmp( argv[argn], "-P" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	p3p = argv[argn];
 	    }
+		/**设置最大的生存时间 */
 		else if ( strcmp( argv[argn], "-M" ) == 0 && argn + 1 < argc )
 	    {
 	    	++argn;
 	    	max_age = atoi( argv[argn] );
 	    }
+		/**设置是否为debug模式 */
 		else if ( strcmp( argv[argn], "-D" ) == 0 )
 	    {
 			debug = 1;
 		}
+		/**错误处理 */
 		else
 	    {
 			usage();

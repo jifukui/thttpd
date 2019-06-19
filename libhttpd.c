@@ -749,7 +749,11 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 
 static int str_alloc_count = 0;
 static size_t str_alloc_size = 0;
-/**申请内存空间*/
+/**申请内存空间
+ * * strP为分配的字符串的地址
+ * maxsizeP存储分配空间的大小
+ * size为定义分配空间的大小
+*/
 void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
 {
     if ( *maxsizeP == 0 )
@@ -773,7 +777,8 @@ void httpd_realloc_str( char** strP, size_t* maxsizeP, size_t size )
     if ( *strP == (char*) 0 )
 	{
 		syslog(LOG_ERR, "out of memory reallocating a string to %ld bytes",(long) *maxsizeP );
-		return;exit( 1 );
+		return;
+		exit( 1 );
 	}
 }
 
@@ -1045,6 +1050,7 @@ static int b64_decode( const char* str, unsigned char* space, int size )
 */
 static int auth_check( httpd_conn* hc, char* dirname  )
 {
+	/**对于定义全局密码的操作 */
     if ( hc->hs->global_passwd )
 	{
 		char* topdir;
@@ -1213,14 +1219,15 @@ static int auth_check2( httpd_conn* hc, char* dirname  )
 
 #endif /* AUTH_FILE */
 
-/**返回文件的路径结构*/
+/**返回302信息返回请求的本地位置信息*/
 static void send_dirredirect( httpd_conn* hc )
 {
     static char* location;
     static char* header;
-    static size_t maxlocation = 0, maxheader = 0;
+    static size_t maxlocation = 0;
+	static size_t maxheader = 0;
     static char headstr[] = "Location: ";
-
+	/**如果有请求数据 */
     if ( hc->query[0] != '\0')
 	{
 		char* cp = strchr( hc->encodedurl, '?' );
@@ -1231,6 +1238,7 @@ static void send_dirredirect( httpd_conn* hc )
 		httpd_realloc_str(&location, &maxlocation,strlen( hc->encodedurl ) + 2 + strlen( hc->query ) );
 		(void) my_snprintf( location, maxlocation,"%s/?%s", hc->encodedurl, hc->query );
 	}
+	/**没有请求数据 */
     else
 	{
 		httpd_realloc_str(&location, &maxlocation, strlen( hc->encodedurl ) + 1 );
@@ -1527,8 +1535,10 @@ static int vhost_map( httpd_conn* hc )
 */
 /**
  * path:为路径
- * resP：为
+ * resP：为转换的信息
  * no_symlink_check：为是否
+ * tildemapped：为去掉前面的'/'字符
+ * 如果no_symlink_check为1则restP的值为空，checked的值为path的值没有最后的'/'字符
 */
 static char* expand_symlinks( char* path, char** restP, int no_symlink_check, int tildemapped )
 {
@@ -1589,14 +1599,17 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
     httpd_realloc_str( &checked, &maxchecked, 1 );
     checked[0] = '\0';
     checkedlen = 0;
+	/**获取传入路径的长度 */
     restlen = strlen( path );
     httpd_realloc_str( &rest, &maxrest, restlen );
+	/**将path的内容赋值给rest */
     (void) strcpy( rest, path );
+	/**如果字符串的最后一个字符为/设置此字符串为无此字符的字符串 */
     if ( rest[restlen - 1] == '/' )
 	{
 		rest[--restlen] = '\0';         /* trim trailing slash */
 	}
-	/**去掉前面的'/'字符 */
+	/**使得rest字符串的第一个字符为非'/'字符 */
     if ( ! tildemapped )
 	{
 		/* Remove any leading slashes. */
@@ -1606,6 +1619,7 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 	    	--restlen;
 	    }
 	}
+	/**设置r为rest的字符 */
     r = rest;
     nlinks = 0;
 
@@ -1619,37 +1633,48 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 		prevrestlen = restlen;
 
 		/* Grab one component from r and transfer it to checked. */
+		/**如果在字符串r中找'/'字符 */
 		cp1 = strchr( r, '/' );
+		/**如果找到了的处理 */
 		if ( cp1 != (char*) 0 )
 		{
 	    	i = cp1 - r;
+			/**在开头找到了 */
 	    	if ( i == 0 )
 			{
 				/* Special case for absolute paths. */
 				httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 );
+				/**设置checked的此检测位置的字符为此字符 */
 				(void) strncpy( &checked[checkedlen], r, 1 );
 				checkedlen += 1;
 			}
+			/**如果开始的字符为../的处理*/
 	    	else if ( strncmp( r, "..", MAX( i, 2 ) ) == 0 )
 			{
 			/* Ignore ..'s that go above the start of the path. */
+				/**如果checkedlen的值不为0 */
 				if ( checkedlen != 0 )
 		    	{
+					/**寻找最后一个/的为位置 */
 		    		cp2 = strrchr( checked, '/' );
+					/**如果没有找打设置checkedlen的值为0 */
 		    		if ( cp2 == (char*) 0 )
 					{
 						checkedlen = 0;
 					}
+					/**如果cp2的值checked的值相等设置checkedlen的值为1 */
 		    		else if ( cp2 == checked )
 					{
 						checkedlen = 1;
 					}
+					/**否则设置checkedlen的值为cp2-checked */
 		    		else
 					{
 						checkedlen = cp2 - checked;
 					}
 		    	}
 			}
+			/**其他的处理 */
 	    	else
 			{
 				httpd_realloc_str( &checked, &maxchecked, checkedlen + 1 + i );
@@ -1664,6 +1689,7 @@ static char* expand_symlinks( char* path, char** restP, int no_symlink_check, in
 	    	r += i + 1;
 	    	restlen -= i + 1;
 		}
+		/**如果没有/字符的处理 */
 		else
 		{
 	    	/* No slashes remaining, r is all one component. */
@@ -2304,13 +2330,14 @@ int httpd_parse_request( httpd_conn* hc )
 			{
 				break;
 			}
-			/***/
+			/**告诉服务器这个页面是从哪个页面连接过来的*/
 	    	if ( strncasecmp( buf, "Referer:", 8 ) == 0 )
 			{
 				cp = &buf[8];
 				cp += strspn( cp, " \t" );
 				hc->referrer = cp;
 			}
+			/**告诉服务器这个页面是从哪个页面连接过来的*/
 	    	else if ( strncasecmp( buf, "Referrer:", 9 ) == 0 )
 			{
 				cp = &buf[9];
@@ -2324,7 +2351,7 @@ int httpd_parse_request( httpd_conn* hc )
 				cp += strspn( cp, " \t" );
 				hc->useragent = cp;
 			}
-			/**获取主机名称*/
+			/**请求的主机名称*/
 	    	else if ( strncasecmp( buf, "Host:", 5 ) == 0 )
 			{
 				cp = &buf[5];
@@ -4454,6 +4481,7 @@ static int really_check_referrer( httpd_conn* hc )
     hs = hc->hs;
 
     /* Check for an empty referrer. */
+	/**引用为空或者引用中的前连个字符为"//"" */
     if ( hc->referrer == (char*) 0 || hc->referrer[0] == '\0' ||( cp1 = strstr( hc->referrer, "//" ) ) == (char*) 0 )
 	{
 		/* Disallow if we require a referrer and the url matches. */

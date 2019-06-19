@@ -86,7 +86,7 @@ typedef struct {
     int listen6_fd;
     int no_log;
     FILE* logfp;
-    int no_symlink_check;
+    int no_symlink_check;           //不检查符号连接标记，对于设置切换到根目录此值为1对于设置不切换到根目录此值为0
     int vhost;
     int global_passwd;
     char* url_pattern;
@@ -112,8 +112,8 @@ typedef struct {
     char* encodedurl;               //原始的编码的url
     char* decodedurl;               //解码的URL
     char* protocol;                 //协议字符串
-    char* origfilename;             //
-    char* expnfilename;             //
+    char* origfilename;             //请求的url经过转换为ASCII字符后的除第一个字节的内容
+    char* expnfilename;             //如果未经过处理此值基本上等于origfilename的值
     char* encodings;                //
     char* pathinfo;                 //
     char* query;                    //
@@ -130,7 +130,7 @@ typedef struct {
     char* authorization;            //
     char* remoteuser;               //
     char* response;                 //
-    size_t maxdecodedurl;           //
+    size_t maxdecodedurl;           //最大的url转换为ASCII的字符长度
     size_t maxorigfilename;         //
     size_t maxexpnfilename;         //
     size_t maxencodings;            //
