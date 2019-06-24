@@ -3750,6 +3750,7 @@ static void cgi_child( httpd_conn* hc )
     ** dup()'d descriptor, so we have to clear it.  This could be
     ** ifdeffed for Linux only.
     */
+   /**设置这样的话将会保证打开的文件描述符在子进程中调用exec相关函数时保持打开 */
     (void) fcntl( hc->conn_fd, F_SETFD, 0 );
 
     /* Close the syslog descriptor so that the CGI program can't
