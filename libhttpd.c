@@ -4123,10 +4123,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		/**对于文件的模式是其他用户不具有读属性的处理*/
 		if ( ! ( hc->sb.st_mode & S_IROTH ) )
 	    {
-	    	syslog(
-			LOG_INFO,
-			"%.80s URL \"%.80s\" tried to index a directory with indexing disabled",
-			httpd_ntoa( &hc->client_addr ), hc->encodedurl );
+	    	syslog(LOG_INFO,"%.80s URL \"%.80s\" tried to index a directory with indexing disabled",httpd_ntoa( &hc->client_addr ), hc->encodedurl );
 	    	httpd_send_err(
 			hc, 403, err403title, "",
 			ERROR_FORM( err403form, "The requested URL '%.80s' resolves to a directory that has indexing disabled.\n" ),
