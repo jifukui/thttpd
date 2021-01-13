@@ -2344,7 +2344,7 @@ int httpd_parse_request( httpd_conn* hc )
 				cp += strspn( cp, " \t" );
 				hc->referrer = cp;
 			}
-			/***/
+			/**用户代理*/
 	    	else if ( strncasecmp( buf, "User-Agent:", 11 ) == 0 )
 			{
 				cp = &buf[11];
@@ -2427,14 +2427,14 @@ int httpd_parse_request( httpd_conn* hc )
 					syslog( LOG_DEBUG, "unparsable time: %.80s", cp );
 				}
 			}
-			/**cookie*/
+			/**cookie信息*/
 	    	else if ( strncasecmp( buf, "Cookie:", 7 ) == 0 )
 			{
 				cp = &buf[7];
 				cp += strspn( cp, " \t" );
 				hc->cookie = cp;
 			}
-			/***/
+			/**分段获取*/
 	    	else if ( strncasecmp( buf, "Range:", 6 ) == 0 )
 			{
 				/* Only support %d- and %d-%d, not %d-%d,%d-%d or -%d. */
@@ -2489,7 +2489,7 @@ int httpd_parse_request( httpd_conn* hc )
 				cp = &buf[15];
 				hc->contentlength = atol( cp );
 			}
-			/***/
+			/**安全*/
 	    	else if ( strncasecmp( buf, "Authorization:", 14 ) == 0 )
 			{
 				cp = &buf[14];

@@ -59,7 +59,11 @@
 #include "mmc.h"
 #include "timers.h"
 #include "match.h"
-
+#define JIFUKUI_SSL
+#ifdef JIFUKUI_SSL
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#endif
 #ifndef SHUT_WR
 #define SHUT_WR 1
 #endif
@@ -393,7 +397,9 @@ int main( int argc, char** argv )
     int gotv4;
 	int gotv6;
     struct timeval tv;
-
+#ifdef JIFUKUI_SSL
+	void		*ssllib;
+#endif
     argv0 = argv[0];
 #ifdef JI_DEBUG
 	printf("The argv0 is %s\n",argv0);
@@ -698,6 +704,16 @@ int main( int argc, char** argv )
     /* Initialize the HTTP layer.  Got to do this before giving up root,
     ** so that we can bind to a privileged port.
     */
+#ifdef JIFUKUI_SSL
+	printf("the ssl lib is \r\n");
+	if ((ssllib = dlopen("libssl.so", RTLD_LAZY)) == NULL) {
+		printf("open ssl error\r\n");
+		return 0;
+	}else{
+		printf("open ssl lib success\r\n");
+	}
+	SSL_library_init();
+#endif
     hs = httpd_initialize(
 	hostname,
 	gotv4 ? &sa4 : (httpd_sockaddr*) 0, gotv6 ? &sa6 : (httpd_sockaddr*) 0,
