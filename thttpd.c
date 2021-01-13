@@ -713,8 +713,6 @@ int main( int argc, char** argv )
 	}else{
 		printf("open ssl lib success\r\n");
 	}
-	dlsym(ssllib, "Apply");
-	SSL_library_init();
 #endif
     hs = httpd_initialize(
 	hostname,
