@@ -54,7 +54,7 @@ DEFS =		 -DHAVE__PROGNAME=1 -DHAVE_FCNTL_H=1 -DHAVE_GRP_H=1 -DHAVE_MEMORY_H=1 -D
 INCLS =		-I.
 CFLAGS =	$(CCOPT) $(DEFS) $(INCLS)
 LDFLAGS =	
-LIBS =		-lcrypt -ldl -lssl
+LIBS =		-lcrypt -ldl -lssl -lcrypto
 NETLIBS =	
 INSTALL =	/usr/bin/install -c
 
