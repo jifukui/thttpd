@@ -557,12 +557,14 @@ int main( int argc, char** argv )
 	/* We're not going to use stdin stdout or stderr from here on, so close
 	** them to save file descriptors.
 	*/
+	/*
 		(void) fclose( stdin );
 		if ( logfp != stdout )
 	    {
 			(void) fclose( stdout );
 		}
 		(void) fclose( stderr );
+	*/
 
 	/* Daemonize - make ourselves a subprocess. */
 #ifdef HAVE_DAEMON
