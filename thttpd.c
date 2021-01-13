@@ -737,7 +737,7 @@ int main( int argc, char** argv )
 			printf("have get success %s\r\n",sslfunc[i]);
 		}
 	}
-	SSL_library_init();
+	//SSL_library_init();
 	/*
 	if(dlsym(ssllib,"OPENSSL_init_ssl")==NULL){
 		printf("have get error\r\n");
