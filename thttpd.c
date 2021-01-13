@@ -709,7 +709,7 @@ int main( int argc, char** argv )
     */
 #ifdef JIFUKUI_SSL
 	SSL_CTX *ctx;
-	if ((CTX = SSL_CTX_new(SSLv23_server_method())) == NULL){
+	if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL){
 		printf("error for this \r\n");
 	}else{
 		printf("good for method\r\n");
