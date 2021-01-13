@@ -748,7 +748,7 @@ int main( int argc, char** argv )
 	SSL_library_init();
 	if ((jifukuictx = SSL_CTX_new(SSLv23_server_method())) == NULL)
 	{
-		printf("load method over\r\n")
+		printf("load method over\r\n");
 	}
 	else if (SSL_CTX_use_certificate_file(jifukuictx, "thttpd.pem", 1) == 0)
 	{
