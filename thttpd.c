@@ -64,6 +64,7 @@
 #include <dlfcn.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
+SSL_CTX *jifukuictx;
 #endif
 #ifndef SHUT_WR
 #define SHUT_WR 1
@@ -708,13 +709,13 @@ int main( int argc, char** argv )
     ** so that we can bind to a privileged port.
     */
 #ifdef JIFUKUI_SSL
-	SSL_CTX *ctx;
+	
+	/*
 	if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL){
 		printf("error for this \r\n");
 	}else{
 		printf("good for method\r\n");
-	}
-/*
+	}*/
 	printf("the ssl lib is \r\n");
 	if ((ssllib = dlopen("libssl.so", RTLD_LAZY)) == NULL) {
 		printf("open ssl error\r\n");
@@ -743,19 +744,21 @@ int main( int argc, char** argv )
 		}else{
 			printf("have get success %s\r\n",sslfunc[i]);
 		}
-	}*/
-	//SSL_library_init();
-	/*
-	if(dlsym(ssllib,"OPENSSL_init_ssl")==NULL){
-		printf("have get error\r\n");
-	}else{
-		printf("good for dlsym\r\n");
 	}
-	if(OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL) == 0){
-		printf("have get error for init\r\n");
-	}else{
-		printf("good for init\r\n");
-	}*/
+	SSL_library_init();
+	if ((jifukuictx = SSL_CTX_new(SSLv23_server_method())) == NULL)
+	{
+		printf("load method over\r\n")
+	}
+	else if (SSL_CTX_use_certificate_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
+	{
+		printf("cannot open certificate\r\n");
+	}
+	else if (SSL_CTX_use_PrivateKey_file(jifukuictx, pem, SSL_FILETYPE_PEM) == 0)
+	{
+		printf("cannot open PrivateKey\r\n");
+	}
+	
 #endif
     hs = httpd_initialize(
 	hostname,
