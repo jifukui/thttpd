@@ -715,12 +715,12 @@ int main( int argc, char** argv )
 	}else{
 		printf("open ssl lib success\r\n");
 	}
-	if(dlsym(ssllib,"SSL_library_init")==NULL){
+	if(dlsym(ssllib,"OPENSSL_init_ssl")==NULL){
 		printf("have get error\r\n");
 	}else{
 		printf("good for dlsym\r\n");
 	}
-	SSL_library_init();
+	OPENSSL_init_ssl();
 #endif
     hs = httpd_initialize(
 	hostname,
