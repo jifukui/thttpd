@@ -708,6 +708,12 @@ int main( int argc, char** argv )
     ** so that we can bind to a privileged port.
     */
 #ifdef JIFUKUI_SSL
+	SSL_CTX *ctx;
+	if ((CTX = SSL_CTX_new(SSLv23_server_method())) == NULL){
+		printf("error for this \r\n");
+	}else{
+		printf("good for method\r\n");
+	}
 /*
 	printf("the ssl lib is \r\n");
 	if ((ssllib = dlopen("libssl.so", RTLD_LAZY)) == NULL) {
@@ -738,7 +744,7 @@ int main( int argc, char** argv )
 			printf("have get success %s\r\n",sslfunc[i]);
 		}
 	}*/
-	SSL_library_init();
+	//SSL_library_init();
 	/*
 	if(dlsym(ssllib,"OPENSSL_init_ssl")==NULL){
 		printf("have get error\r\n");
