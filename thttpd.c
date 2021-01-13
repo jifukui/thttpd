@@ -61,6 +61,7 @@
 #include "match.h"
 #define JIFUKUI_SSL
 #ifdef JIFUKUI_SSL
+#include <dlfcn.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #endif
