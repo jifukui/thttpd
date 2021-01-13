@@ -715,7 +715,7 @@ int main( int argc, char** argv )
 	}else{
 		printf("open ssl lib success\r\n");
 	}
-	char sslfunc[13][]=[
+	char *sslfunc[]={
 		"SSL_free",
 		"SSL_accept",
 		"SSL_connect",
@@ -729,7 +729,7 @@ int main( int argc, char** argv )
 		"SSL_library_init",
 		"SSL_CTX_use_PrivateKey_file",
 		"SSL_CTX_use_certificate_file",
-	];
+	};
 	for(int i=0;i<13;i++){
 		if(dlsym(ssllib,sslfunc[i])==NULL){
 			printf("have get error %s\r\n",sslfunc[i]);
