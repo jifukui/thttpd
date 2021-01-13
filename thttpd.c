@@ -720,7 +720,11 @@ int main( int argc, char** argv )
 	}else{
 		printf("good for dlsym\r\n");
 	}
-	SSL_library_init();
+	if(OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL) == 0){
+		printf("have get error for init\r\n");
+	}else{
+		printf("good for init\r\n");
+	}
 #endif
     hs = httpd_initialize(
 	hostname,
