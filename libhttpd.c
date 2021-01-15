@@ -836,7 +836,9 @@ static void send_response_tail( httpd_conn* hc )
     add_response( hc, buf );
 }
 
-
+/**
+ * 转义输出的HTML的内容
+*/
 static void defang( char* str, char* dfstr, int dfsize )
 {
     char* cp1;
@@ -4297,6 +4299,10 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    }
 		/**发送mime类型*/
 		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
+		#ifdef JI_DEBUG
+		//add_response( hc, buf );
+		printf("the file name is %s\r\n",hc->expnfilename);
+		#endif
 	}
 
     return 0;
