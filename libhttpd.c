@@ -4302,6 +4302,12 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		#ifdef JI_DEBUG
 		//add_response( hc, buf );
 		printf("the file name is %s\r\n",hc->expnfilename);
+		if(!strcmp(hc->expnfilename,"index.html")){
+			char data[200]; 
+			int id = 123456789;
+			sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=20",id);
+			add_response( hc, data );
+		}
 		#endif
 	}
 
