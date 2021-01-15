@@ -748,7 +748,7 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 			if(!strcmp(hc->expnfilename,"index.html")){
 				char data[200]; 
 				int id = 123456789;
-				sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30",id);
+				sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30\015\012",id);
 				printf("the data is %s\r\n",data);
 				add_response( hc, data );
 			}
