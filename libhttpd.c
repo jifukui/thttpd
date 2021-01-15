@@ -743,14 +743,15 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 			add_response( hc, extraheads );
 		}
 		#ifdef JI_DEBUG
-		//add_response( hc, buf );
-		printf("the file name is %s\r\n",hc->expnfilename);
-		if(!strcmp(hc->expnfilename,"index.html")){
-			char data[200]; 
-			int id = 123456789;
-			sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30",id);
-			add_response( hc, data );
-		}
+			//add_response( hc, buf );
+			printf("the file name is %s\r\n",hc->expnfilename);
+			if(!strcmp(hc->expnfilename,"index.html")){
+				char data[200]; 
+				int id = 123456789;
+				sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30",id);
+				printf("the data is %s\r\n",data);
+				add_response( hc, data );
+			}
 		#endif
 		add_response( hc, "\015\012" );
 	}
