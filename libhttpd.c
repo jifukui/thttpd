@@ -742,6 +742,16 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 	    {
 			add_response( hc, extraheads );
 		}
+		#ifdef JI_DEBUG
+		//add_response( hc, buf );
+		printf("the file name is %s\r\n",hc->expnfilename);
+		if(!strcmp(hc->expnfilename,"index.html")){
+			char data[200]; 
+			int id = 123456789;
+			sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30",id);
+			add_response( hc, data );
+		}
+		#endif
 		add_response( hc, "\015\012" );
 	}
 }
@@ -4299,16 +4309,6 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    }
 		/**发送mime类型*/
 		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
-		#ifdef JI_DEBUG
-		//add_response( hc, buf );
-		printf("the file name is %s\r\n",hc->expnfilename);
-		if(!strcmp(hc->expnfilename,"index.html")){
-			char data[200]; 
-			int id = 123456789;
-			sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=20",id);
-			add_response( hc, data );
-		}
-		#endif
 	}
 
     return 0;
