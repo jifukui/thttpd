@@ -89,7 +89,7 @@ static void jifukui_login( ClientData client_data, struct timeval* nowP )
 	t = (Timer*) malloc( sizeof(Timer) );
 	(void) gettimeofday( t, (struct timezone*) 0 );
 	time = t->tv_sec*1000000+t->tv_usec;
-	printf("have lougou %d\r\n",time);
+	printf("have logout %u\r\n",time);
 }
 #endif
 #ifndef STDIN_FILENO
@@ -767,10 +767,10 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 			t = (Timer*) malloc( sizeof(Timer) );
 			(void) gettimeofday( t, (struct timezone*) 0 );
 			time = t->tv_sec*1000000+t->tv_usec;
-			printf("have start %d\r\n",time);
-			if ( tmr_create( (struct timeval*) 0, jifukui_login,(ClientData) 512, 3000 * 1000L, 0 ) == (Timer*) 0 )
+			printf("have start %u\r\n",time);
+			if ( tmr_create( (struct timeval*) 0, jifukui_login,(ClientData) 512, 30 * 1000L, 0 ) == (Timer*) 0 )
 			{
-				syslog( LOG_CRIT, "errorr jifukui_login" );
+				printf("create timer error\r\n");
 			}
 		#endif
 		add_response( hc, "\015\012" );
