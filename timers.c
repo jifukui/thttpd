@@ -44,7 +44,10 @@ static int free_count;			/**处于空闲状态的计时器的数量*/
 ClientData JunkClientData;
 
 
-/**返回对时间处理的hash值*/
+/**
+ * 根据传入的时间对象计算此时间对象的hash值
+ * 返回对时间处理的hash值
+ * */
 static unsigned int hash( Timer* t )
 {
     /* We can hash on the trigger time, even though it can change over
@@ -55,7 +58,9 @@ static unsigned int hash( Timer* t )
     return ((unsigned int) t->time.tv_sec ^(unsigned int) t->time.tv_usec ) % HASH_SIZE;
 }
 
-
+/**
+ * 插入一个时间对象
+*/
 static void l_add( Timer* t )
 {
     int h = t->hash;
@@ -63,6 +68,9 @@ static void l_add( Timer* t )
     Timer* t2prev;
 
     t2 = timers[h];
+	//对于当前数组为空的处理
+	//设置当前的数组存储传入的时间对象
+	//将传入的时间对象的前后指针都指向空
     if ( t2 == (Timer*) 0 )
 	{
 		/* The list is empty. */
@@ -71,6 +79,8 @@ static void l_add( Timer* t )
 	}
     else
 	{
+		//对于当前数组不是空的处理
+		//按照时间的先后顺序排列在链表中的位置
 		if ( t->time.tv_sec < t2->time.tv_sec ||
 	     ( t->time.tv_sec == t2->time.tv_sec &&
 	       t->time.tv_usec <= t2->time.tv_usec ) )
@@ -106,7 +116,9 @@ static void l_add( Timer* t )
 	}
 }
 
-
+/**
+ * 删除一个时间对象
+*/
 static void l_remove( Timer* t )
 {
     int h = t->hash;
@@ -125,7 +137,9 @@ static void l_remove( Timer* t )
 	}
 }
 
-/**重新添加此计时器*/
+/**
+ * 重新添加此计时器
+ * */
 static void l_resort( Timer* t )
 {
     /* Remove the timer from its old list. */
@@ -136,7 +150,9 @@ static void l_resort( Timer* t )
     l_add( t );
 }
 
-/**计时器初始化*/
+/**
+ * 计时器初始化
+ * */
 void tmr_init( void )
 {
     int h;
@@ -172,14 +188,14 @@ Timer* tmr_create(
     else
 	{
 		t = (Timer*) malloc( sizeof(Timer) );
-		/**对于*/
+		/**对于分配空间失败的处理*/
 		if ( t == (Timer*) 0 )
 	    {
 			return (Timer*) 0;
 		}
 		++alloc_count;
 	}
-
+	//初始化相关的数据
     t->timer_proc = timer_proc;
     t->client_data = client_data;
     t->msecs = msecs;
@@ -210,7 +226,9 @@ Timer* tmr_create(
     return t;
 }
 
-
+/**
+ * 
+*/
 struct timeval* tmr_timeout( struct timeval* nowP )
 {
     long msecs;
@@ -226,7 +244,9 @@ struct timeval* tmr_timeout( struct timeval* nowP )
     return &timeout;
 }
 
-/***/
+/**
+ * 
+*/
 long tmr_mstimeout( struct timeval* nowP )
 {
     int h;
@@ -267,7 +287,11 @@ long tmr_mstimeout( struct timeval* nowP )
     return msecs;
 }
 
-/**处理时间hash表中超时的时间处理程序根据是否重新加载标志将此时间处理程序进行重新加载还是删除 */
+/**
+ * 处理时间hash表中超时的时间处理程序
+ * 根据是否重新加载标志
+ * 将此时间处理程序进行重新加载还是删除 
+ * */
 void tmr_run( struct timeval* nowP )
 {
     int h;
@@ -307,7 +331,9 @@ void tmr_run( struct timeval* nowP )
 	}
 }
 
-/**复位计时器*/
+/**
+ * 复位计时器
+ * */
 void tmr_reset( struct timeval* nowP, Timer* t )
 {
     t->time = *nowP;
@@ -321,7 +347,9 @@ void tmr_reset( struct timeval* nowP, Timer* t )
     l_resort( t );
 }
 
-
+/**
+ * 清除计时器
+*/
 void tmr_cancel( Timer* t )
 {
     /* Remove it from its active list. */

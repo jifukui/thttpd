@@ -81,7 +81,17 @@
 #include "timers.h"
 #include "match.h"
 #include "tdate_parse.h"
-
+#ifdef JI_DEBUG
+static void jifukui_login( ClientData client_data, struct timeval* nowP )
+{
+	int time ;
+	struct timeval* t;
+	t = (Timer*) malloc( sizeof(Timer) );
+	(void) gettimeofday( t, (struct timezone*) 0 );
+	time = t.tv_sec*1000000+t.tv_usec;
+	printf("have lougou %d\r\n",time);
+}
+#endif
 #ifndef STDIN_FILENO
 #define STDIN_FILENO 0
 #endif
@@ -751,6 +761,16 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 				sprintf(data,"Set-Cookie: sessionid=%d;Max-Age=30\015\012",id);
 				printf("the data is %s\r\n",data);
 				add_response( hc, data );
+			}
+			int time ;
+			struct timeval* t;
+			t = (Timer*) malloc( sizeof(Timer) );
+			(void) gettimeofday( t, (struct timezone*) 0 );
+			time = t.tv_sec*1000000+t.tv_usec;
+			printf("have start %d\r\n",time);
+			if ( tmr_create( (struct timeval*) 0, jifukui_login, 512, 3000 * 1000L, 0 ) == (Timer*) 0 )
+			{
+				syslog( LOG_CRIT, "errorr jifukui_login" );
 			}
 		#endif
 		add_response( hc, "\015\012" );
@@ -1881,11 +1901,13 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
 	printf("The data is:");
-	for(ji=0;ji<6;ji++)
+	for(ji=0;ji<14;ji++)
 	{
 		printf("%u:",(unsigned char)sa.sa.sa_data[ji]);
 	}
 	printf("\n");
+	printf("the port is %d\r\n",sa.sa_in.sin_port);
+	printf("the id address is %d:%d:%d:%d:%d\r\n",sa.sa_in.S_un_b[0]，sa.sa_in.S_un_b[1]，sa.sa_in.S_un_b[2]，sa.sa_in.S_un_b[3])
 	printf("The accept fd is %d\n",listen_fd);
 	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif

@@ -38,6 +38,11 @@
 ** can use it for whatever, and it gets passed to the callback when the
 ** timer triggers.
 */
+/**
+ * 定义用户数据
+ * 可以是任意类型的指针
+ * 也可以是整形或者是长整形
+*/
 typedef union {
     void* p;
     int i;
@@ -50,6 +55,11 @@ extern ClientData JunkClientData;	/* for use when you don't care */
 ** the ClientData associated with the timer, and a timeval in case
 ** it wants to schedule another timer.
 */
+/**
+ * 计时器处理函数
+ * client_data：用户数据
+ * nowP：时间值
+*/
 typedef void TimerProc( ClientData client_data, struct timeval* nowP );
 
 /* The Timer struct. */
@@ -57,11 +67,11 @@ typedef void TimerProc( ClientData client_data, struct timeval* nowP );
  * timer_proc： 处理函数
  * client_data： 处理函数参数
  * msecs： 超时时间单位为毫秒
- * periodic： 是否一直使用标记位
- * time：
+ * periodic： 是否一直使用标记位，周期执行
+ * time：执行时间
  * prev： 结构体的上一个
  * next： 结构体的下一个
- * hash:
+ * hash: hash值
 */
 typedef struct TimerStruct {
     TimerProc* timer_proc;
