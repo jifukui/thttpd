@@ -1907,7 +1907,8 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	}
 	printf("\n");
 	printf("the port is %d\r\n",sa.sa_in.sin_port);
-	printf("the id address is %d:%d:%d:%d:%d\r\n",sa.sa_in.sin_addr.S_un_b[0],sa.sa_in.sin_addr.S_un_b[1]，sa.sa_in.sin_addr.S_un_b[2]，sa.sa_in.sin_addr.S_un_b[3])
+	// printf("the id address is %d:%d:%d:%d:%d\r\n",sa.sa_in.sin_addr.S_un_b[0],sa.sa_in.sin_addr.S_un_b[1]，sa.sa_in.sin_addr.S_un_b[2]，sa.sa_in.sin_addr.S_un_b[3]);
+	printf("the id address is %u\r\n",sa.sa_in.sin_addr);
 	printf("The accept fd is %d\n",listen_fd);
 	printf("The accepted fd is %d\n",hc->conn_fd);
 #endif
