@@ -716,6 +716,7 @@ int main( int argc, char** argv )
 	}else{
 		printf("good for method\r\n");
 	}*/
+	/*
 	printf("the ssl lib is \r\n");
 	if ((ssllib = dlopen("libssl.so", RTLD_LAZY)) == NULL) {
 		printf("open ssl error\r\n");
@@ -745,7 +746,7 @@ int main( int argc, char** argv )
 			printf("have get success %s\r\n",sslfunc[i]);
 		}
 	}
-	SSL_library_init();
+	SSL_library_init();*/
 	if ((jifukuictx = SSL_CTX_new(SSLv23_server_method())) == NULL)
 	{
 		printf("load method over\r\n");
