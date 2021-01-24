@@ -1859,7 +1859,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 #ifdef JI_DEBUG
 	printf("The hc->initialized status is %d\n",hc->initialized);
 	SSL  *ssl;
-	ssl = SSL_new (ctx); 
+	ssl = SSL_new (hs->ssl_ctx); 
 	if(ssl==NULL){
 		printf("creat ssl error\r\n");
 		return GC_FAIL;
@@ -1944,7 +1944,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 		return GC_FAIL;
 	}
 #ifdef JI_DEBUG
-	SSL		*ssl = NULL;
+	// SSL		*ssl = NULL;
 	//
 	//ssl = SSL_new();
 	//
