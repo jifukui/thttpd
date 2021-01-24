@@ -1907,6 +1907,19 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	*/
     hc->conn_fd = accept( listen_fd, &sa.sa, &sz );
 #ifdef JI_DEBUG
+	int jin;
+	if(hc->conn_fd!=-1){
+		printf("accept success \r\n");
+		if ((jin = SSL_accept(hc->ssl)) == 1) {
+			printf("have accept\r\n");
+			
+		} else {
+			jin = SSL_get_error(hc->ssl, jin);
+			if (jin != SSL_ERROR_WANT_READ && jin != SSL_ERROR_WANT_WRITE)
+				stream->flags |= FLAG_CLOSED;
+			printf("SSL_accept error %d\r\n",jin);
+		}
+	}
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
 	printf("The data is:");
@@ -1944,11 +1957,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 		return GC_FAIL;
 	}
 #ifdef JI_DEBUG
-	// SSL		*ssl = NULL;
-	//
-	//ssl = SSL_new();
-	//
-	//SSL_set_fd(ssl, sock);
+	
 #endif
     (void) fcntl( hc->conn_fd, F_SETFD, 1 );
     hc->hs = hs;
