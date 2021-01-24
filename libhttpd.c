@@ -1916,7 +1916,9 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 		} else {
 			jin = SSL_get_error(hc->ssl, jin);
 			if (jin != SSL_ERROR_WANT_READ && jin != SSL_ERROR_WANT_WRITE)
-				stream->flags |= FLAG_CLOSED;
+			{
+				printf("somethings \r\n");
+			}
 			printf("SSL_accept error %d\r\n",jin);
 		}
 	}
