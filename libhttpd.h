@@ -35,7 +35,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
+#ifdef JI_DEBUG
+#include <dlfcn.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#endif
 #if defined(AF_INET6) && defined(IN6_IS_ADDR_V4MAPPED)
 //#define USE_IPV6 /**禁止使用IPV6*/
 #endif
@@ -92,6 +96,9 @@ typedef struct {
     char* url_pattern;
     char* local_pattern;
     int no_empty_referrers;
+#ifdef JI_DEBUG
+    SSL_CTX	*ssl_ctx;
+#endif
 } httpd_server;
 
 /* A connection. */
@@ -163,6 +170,9 @@ typedef struct {
     struct stat sb;                 //文件状态值
     int conn_fd;                    //连接的文件描述符
     char* file_address;             //映射的文件的内存地址
+#ifdef JI_DEBUG
+    SSL  *ssl;
+#endif
 } httpd_conn;
 
 /* Methods. */

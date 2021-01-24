@@ -61,10 +61,6 @@
 #include "match.h"
 #define JIFUKUI_SSL
 #ifdef JIFUKUI_SSL
-#include <dlfcn.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
-SSL_CTX *jifukuictx;
 #endif
 #ifndef SHUT_WR
 #define SHUT_WR 1
@@ -708,59 +704,7 @@ int main( int argc, char** argv )
     /* Initialize the HTTP layer.  Got to do this before giving up root,
     ** so that we can bind to a privileged port.
     */
-#ifdef JIFUKUI_SSL
-	
-	/*
-	if ((ctx = SSL_CTX_new(SSLv23_server_method())) == NULL){
-		printf("error for this \r\n");
-	}else{
-		printf("good for method\r\n");
-	}*/
-	/*
-	printf("the ssl lib is \r\n");
-	if ((ssllib = dlopen("libssl.so", RTLD_LAZY)) == NULL) {
-		printf("open ssl error\r\n");
-		return 0;
-	}else{
-		printf("open ssl lib success\r\n");
-	}
-	char *sslfunc[]={
-		"SSL_free",
-		"SSL_accept",
-		"SSL_connect",
-		"SSL_read",
-		"SSL_write",
-		"SSL_get_error",	
-		"SSL_set_fd",
-		"SSL_new",
-		"SSL_CTX_new",
-		"SSLv23_server_method",
-		"SSL_library_init",
-		"SSL_CTX_use_PrivateKey_file",
-		"SSL_CTX_use_certificate_file",
-	};
-	for(int i=0;i<13;i++){
-		if(dlsym(ssllib,sslfunc[i])==NULL){
-			printf("have get error %s\r\n",sslfunc[i]);
-		}else{
-			printf("have get success %s\r\n",sslfunc[i]);
-		}
-	}
-	SSL_library_init();*/
-	if ((jifukuictx = SSL_CTX_new(SSLv23_server_method())) == NULL)
-	{
-		printf("load method over\r\n");
-	}
-	else if (SSL_CTX_use_certificate_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
-	{
-		printf("cannot open certificate\r\n");
-	}
-	else if (SSL_CTX_use_PrivateKey_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
-	{
-		printf("cannot open PrivateKey\r\n");
-	}
-	
-#endif
+
     hs = httpd_initialize(
 	hostname,
 	gotv4 ? &sa4 : (httpd_sockaddr*) 0, gotv6 ? &sa6 : (httpd_sockaddr*) 0,
@@ -772,7 +716,24 @@ int main( int argc, char** argv )
 	{
 		exit( 1 );
 	}
-
+#ifdef JIFUKUI_SSL
+	SSL_CTX *jifukuictx;
+	if ((jifukuictx = SSL_CTX_new(SSLv23_server_method())) == NULL)
+	{
+		printf("load method over\r\n");
+	}
+	else if (SSL_CTX_use_certificate_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
+	{
+		printf("cannot open certificate\r\n");
+	}
+	else if (SSL_CTX_use_PrivateKey_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
+	{
+		printf("cannot open PrivateKey\r\n");
+	}else{
+		printf("good for openssl\r\n");
+	}
+	hs->ssl_ctx=jifukuictx;
+#endif
     /* Set up the occasional timer. */
     if ( tmr_create( (struct timeval*) 0, occasional, JunkClientData, OCCASIONAL_TIME * 1000L, 1 ) == (Timer*) 0 )
 	{
