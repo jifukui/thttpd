@@ -1910,7 +1910,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	int jin;
 	if(hc->conn_fd!=-1){
 		printf("accept success \r\n");
-		jin = SSL_accept(hc->ssl));
+		/*jin = SSL_accept(hc->ssl);
 		printf("accept status is %d \r\n",jin);
 		if (jin == 1) {
 			printf("have accept\r\n");
@@ -1922,7 +1922,7 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 				printf("somethings \r\n");
 			}
 			printf("SSL_accept error %d\r\n",jin);
-		}
+		}*/
 	}
 	printf("The ip type is %d\n",sa.sa.sa_family);
 	char ji=0;
