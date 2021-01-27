@@ -1910,7 +1910,9 @@ int httpd_get_conn( httpd_server* hs, int listen_fd, httpd_conn* hc )
 	int jin;
 	if(hc->conn_fd!=-1){
 		printf("accept success \r\n");
-		if ((jin = SSL_accept(hc->ssl)) == 1) {
+		jin = SSL_accept(hc->ssl));
+		printf("accept status is %d \r\n",jin);
+		if (jin == 1) {
 			printf("have accept\r\n");
 			
 		} else {
