@@ -735,6 +735,7 @@ int main( int argc, char** argv )
 	hs->ssl_ctx=jifukuictx;
 #endif
     /* Set up the occasional timer. */
+	printf("start Set up the occasional timer\r\n");
     if ( tmr_create( (struct timeval*) 0, occasional, JunkClientData, OCCASIONAL_TIME * 1000L, 1 ) == (Timer*) 0 )
 	{
 		syslog( LOG_CRIT, "tmr_create(occasional) failed" );
