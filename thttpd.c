@@ -423,7 +423,7 @@ int main( int argc, char** argv )
     /* Handle command-line arguments. */
 	/**输入命令处理*/
     parse_args( argc, argv );
-
+	printf("the listen prot is %d\r\n",port);
     /* Read zone info now, in case we chroot(). */
 	/**c语言标准函数，设置时区*/
     tzset();
@@ -1803,6 +1803,7 @@ static int handle_newconnect( struct timeval* tvP, int listen_fd )
 /**从客户端的连接获取数据*/
 static void handle_read( connecttab* c, struct timeval* tvP )
 {
+	printf("start hand read info\r\n");
     int sz;
     ClientData client_data;
     httpd_conn* hc = c->hc;
