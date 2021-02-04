@@ -35,11 +35,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#ifdef JI_DEBUG
+//#ifdef JI_DEBUG
 #include <dlfcn.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#endif
+//#endif
 #if defined(AF_INET6) && defined(IN6_IS_ADDR_V4MAPPED)
 //#define USE_IPV6 /**禁止使用IPV6*/
 #endif
