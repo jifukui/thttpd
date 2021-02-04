@@ -606,6 +606,7 @@ static void add_response( httpd_conn* hc, char* str )
     size_t len;
 	printf("have add_response\r\n");
     len = strlen( str );
+	printf("have add_response the data length is %d\r\n",len);
     httpd_realloc_str( &hc->response, &hc->maxresponse, hc->responselen + len );
     (void) memmove( &(hc->response[hc->responselen]), str, len );
     hc->responselen += len;
@@ -614,7 +615,7 @@ static void add_response( httpd_conn* hc, char* str )
 /* Send the buffered response. */
 void httpd_write_response( httpd_conn* hc )
 {
-	printf("start httpd_write_response1111\r\n");
+	printf("start httpd_write_response1111 and length is %d\r\n",hc->responselen);
     /* If we are in a sub-process, turn off no-delay mode. */
     if ( sub_process )
 	{
