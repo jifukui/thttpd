@@ -628,7 +628,7 @@ void httpd_write_response( httpd_conn* hc )
 		/**向文件描述符中写入数据*/
 		//jifukui
 		printf("start httpd_write_response\r\n");
-		(void) httpd_write_fully( hc->ssl, hc->response, hc->responselen );
+		(void) httpd_write_fully((struct SSL *) hc->ssl, hc->response, hc->responselen );
 		hc->responselen = 0;
 	}
 }
@@ -3779,10 +3779,10 @@ static void cgi_interpose_output( httpd_conn* hc, int rfd )
 		default: title = "Something"; break;
 	}
     (void) my_snprintf( buf, sizeof(buf), "HTTP/1.0 %d %s\015\012", status, title );
-    (void) httpd_write_fully( hc->ssl, buf, strlen( buf ) );
+    (void) httpd_write_fully( (struct SSL *)hc->ssl, buf, strlen( buf ) );
 
     /* Write the saved headers. */
-    (void) httpd_write_fully( hc->ssl, headers, headers_len );
+    (void) httpd_write_fully( (struct SSL *) hc->ssl, headers, headers_len );
 
     /* Echo the rest of the output. */
     for (;;)
