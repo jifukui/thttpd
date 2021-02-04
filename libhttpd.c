@@ -625,7 +625,8 @@ void httpd_write_response( httpd_conn* hc )
     if ( hc->responselen > 0 )
 	{
 		/**向文件描述符中写入数据*/
-		(void) httpd_write_fully( hc->conn_fd, hc->response, hc->responselen );
+		//jifukui
+		(void) httpd_write_fully( hc->ssl, hc->response, hc->responselen );
 		hc->responselen = 0;
 	}
 }
@@ -4778,7 +4779,8 @@ int httpd_write_fully( int fd, const char* buf, size_t nbytes )
 	{
 		int r;
 
-		r = write( fd, buf + nwritten, nbytes - nwritten );
+		//r = write( fd, buf + nwritten, nbytes - nwritten );
+		r = SSL_write(ssl,buf + nwritten,nbytes - nwritten);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
 	    	sleep( 1 );
