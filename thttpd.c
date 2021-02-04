@@ -1842,7 +1842,8 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 #endif
     /* Read some more bytes. */
 	/**服务器从客户端读取数据hc->read_size - hc->read_idx个字节，并将数据存储至read_buf中*/
-    sz = read(hc->conn_fd, &(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx );
+    //sz = read(hc->conn_fd, &(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx );
+	sz = SSL_read(hc->ssl,&(hc->read_buf[hc->read_idx]),hc->read_size - hc->read_idx);
 	/**对于读取到文件结束时的处理*/
     if ( sz == 0 )
 	{
@@ -1866,6 +1867,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 		finish_connection( c, tvP );
 		return;
 	}
+	printf("the read data is %s\r\n",hc->read_buf[hc->read_idx]);
 	/**更新读取数据的位置*/
     hc->read_idx += sz;
 	/**更新时间*/
