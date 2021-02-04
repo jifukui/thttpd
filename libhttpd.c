@@ -619,6 +619,7 @@ void httpd_write_response( httpd_conn* hc )
     if ( sub_process )
 	{
 		/**设置为阻塞模式*/
+		printf("start httpd_write_response222\r\n");
 		httpd_clear_ndelay( hc->conn_fd );
 	}
     /* Send the response, if necessary. */
@@ -631,6 +632,7 @@ void httpd_write_response( httpd_conn* hc )
 		(void) httpd_write_fully((struct SSL *) hc->ssl, hc->response, hc->responselen );
 		hc->responselen = 0;
 	}
+	printf("start httpd_write_response end\r\n");
 }
 
 
