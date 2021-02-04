@@ -604,12 +604,12 @@ char* httpd_err503form =
 static void add_response( httpd_conn* hc, char* str )
 {
     size_t len;
-	printf("have add_response\r\n");
     len = strlen( str );
 	printf("have add_response the data length is %d\r\n",len);
     httpd_realloc_str( &hc->response, &hc->maxresponse, hc->responselen + len );
     (void) memmove( &(hc->response[hc->responselen]), str, len );
     hc->responselen += len;
+	printf("the data address is %u and the lenth is %d\r\n",hc,hc->responselen);
 }
 
 /* Send the buffered response. */
