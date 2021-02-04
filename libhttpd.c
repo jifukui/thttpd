@@ -4780,7 +4780,8 @@ int httpd_write_fully( int fd, const char* buf, size_t nbytes )
 		int r;
 
 		//r = write( fd, buf + nwritten, nbytes - nwritten );
-		r = SSL_write(ssl,buf + nwritten,nbytes - nwritten);
+		// jifukui
+		r = SSL_write(fd,buf + nwritten,nbytes - nwritten);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
 	    	sleep( 1 );
