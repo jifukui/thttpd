@@ -626,6 +626,7 @@ void httpd_write_response( httpd_conn* hc )
 	{
 		/**向文件描述符中写入数据*/
 		//jifukui
+		printf("start httpd_write_response\r\n");
 		(void) httpd_write_fully( hc->ssl, hc->response, hc->responselen );
 		hc->responselen = 0;
 	}
@@ -4781,6 +4782,7 @@ int httpd_write_fully( int fd, const char* buf, size_t nbytes )
 
 		//r = write( fd, buf + nwritten, nbytes - nwritten );
 		// jifukui
+		printf("start write data\r\n");
 		r = SSL_write(fd,buf + nwritten,nbytes - nwritten);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {

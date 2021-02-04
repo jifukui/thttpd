@@ -872,7 +872,7 @@ int main( int argc, char** argv )
 	    }
 		/**对于可用的文件描述符的值为正数的处理*/
 		/**对于IP地址为IPv6进行处理*/
-		printf("start httpd server init\r\n");
+		//printf("start httpd server init\r\n");
 		if ( hs != (httpd_server*) 0 && hs->listen6_fd != -1 &&fdwatch_check_fd( hs->listen6_fd ) )
 	    {
 #ifdef JI_DEBUG
