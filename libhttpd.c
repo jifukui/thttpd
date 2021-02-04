@@ -776,6 +776,7 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 				printf("create timer error\r\n");
 			}
 		#endif
+		printf("add_response index.html\r\n");
 		add_response( hc, "\015\012" );
 	}
 }
