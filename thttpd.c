@@ -1922,7 +1922,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 		finish_connection( c, tvP );
 		return;
 	}
-
+	printf("good start end \r\n");
     /* Fill in end_byte_index. */
 	/**对于定义range的处理*/
     if ( hc->got_range )

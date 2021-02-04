@@ -615,7 +615,7 @@ static void add_response( httpd_conn* hc, char* str )
 /* Send the buffered response. */
 void httpd_write_response( httpd_conn* hc )
 {
-	printf("start httpd_write_response1111 address %u and length is %d\r\n",hc,hc->responselen);
+	printf("start httpd_write_response1111 address %u and length is %d \r\n",hc,hc->responselen);
     /* If we are in a sub-process, turn off no-delay mode. */
     if ( sub_process )
 	{
@@ -781,6 +781,7 @@ static void send_mime( httpd_conn* hc, int status, char* title, char* encodings,
 		#endif
 		printf("add_response index.html\r\n");
 		add_response( hc, "\015\012" );
+		printf("over add_response index.html\r\n");
 	}
 }
 
@@ -4375,6 +4376,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 		/**发送mime类型*/
 		printf("really_start_request\r\n");
 		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
+		printf("really_start_request end\r\n");
 	}
 
     return 0;
