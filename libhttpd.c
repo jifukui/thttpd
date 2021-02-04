@@ -4778,7 +4778,7 @@ int httpd_read_fully( int fd, void* buf, size_t nbytes )
 
 
 /* Write the requested buffer completely, accounting for interruptions. */
-int httpd_write_fully( struct SSL * fd, const char* buf, size_t nbytes )
+int httpd_write_fully( struct SSL *fd, const char* buf, size_t nbytes )
     {
     int nwritten;
 
