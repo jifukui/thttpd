@@ -3615,6 +3615,8 @@ static char** make_argp( httpd_conn* hc )
 */
 static void cgi_interpose_input( httpd_conn* hc, int wfd )
 {
+	//jifukui
+#if 0
     size_t c;
     ssize_t r;
     char buf[1024];
@@ -3650,6 +3652,7 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 	c += r;
 	}
     post_post_garbage_hack( hc );
+#endif
 }
 
 
@@ -3776,10 +3779,10 @@ static void cgi_interpose_output( httpd_conn* hc, int rfd )
 		default: title = "Something"; break;
 	}
     (void) my_snprintf( buf, sizeof(buf), "HTTP/1.0 %d %s\015\012", status, title );
-    (void) httpd_write_fully( hc->conn_fd, buf, strlen( buf ) );
+    (void) httpd_write_fully( hc->ssl, buf, strlen( buf ) );
 
     /* Write the saved headers. */
-    (void) httpd_write_fully( hc->conn_fd, headers, headers_len );
+    (void) httpd_write_fully( hc->ssl, headers, headers_len );
 
     /* Echo the rest of the output. */
     for (;;)
@@ -3794,12 +3797,13 @@ static void cgi_interpose_output( httpd_conn* hc, int rfd )
 	    {
 			break;
 		}
-		if ( httpd_write_fully( hc->conn_fd, buf, r ) != r )
+		if ( httpd_write_fully( hc->ssl, buf, r ) != r )
 	    {
 			break;
 		}
 	}
-    shutdown( hc->conn_fd, SHUT_WR );
+	//jifukui
+    //shutdown( hc->ssl, SHUT_WR );
 }
 
 
@@ -4774,7 +4778,7 @@ int httpd_read_fully( int fd, void* buf, size_t nbytes )
 
 
 /* Write the requested buffer completely, accounting for interruptions. */
-int httpd_write_fully( int fd, const char* buf, size_t nbytes )
+int httpd_write_fully( struct SSL * fd, const char* buf, size_t nbytes )
     {
     int nwritten;
 
