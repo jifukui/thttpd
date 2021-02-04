@@ -64,7 +64,7 @@ INSTALL =	/usr/bin/install -c
 	@rm -f $@
 	$(CC) $(CFLAGS) -c $*.c
 
-SRC =		thttpd.c libhttpd.c fdwatch.c mmc.c timers.c match.c tdate_parse.c
+SRC =		thttpd.c libhttpd.c fdwatch.c mmc.c timers.c match.c tdate_parse.c Session.c
 
 OBJ =		$(SRC:.c=.o) 
 
