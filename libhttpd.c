@@ -4365,6 +4365,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 	    	return -1;
 	    }
 		/**发送mime类型*/
+		printf("really_start_request\r\n");
 		send_mime(hc, 200, ok200title, hc->encodings, "", hc->type, hc->sb.st_size,hc->sb.st_mtime );
 	}
 
