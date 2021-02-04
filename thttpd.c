@@ -2003,7 +2003,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 		/* No, just write the file. */
 		printf("here write file\r\n");
 		sz = SSL_write(hc->ssl, &(hc->file_address[c->next_byte_index]),MIN( c->end_byte_index - c->next_byte_index, max_bytes ) );
-		printf("the write file length is %d\\r\n",sz)
+		printf("the write file length is %d\\r\n",sz);
 		//sz = write(hc->conn_fd, &(hc->file_address[c->next_byte_index]),MIN( c->end_byte_index - c->next_byte_index, max_bytes ) );
 	}
 	/**对于hc->responselen的值不为0的处理*/
