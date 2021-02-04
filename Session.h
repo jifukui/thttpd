@@ -10,6 +10,8 @@
 #include "timers.h"
 #include "config.h"
 #define SESSION_NUM 20
+#define PASSWORDLEN 64
+#define AUTH_NUM 8
 union semun
 {
     int val;
