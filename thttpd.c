@@ -1984,7 +1984,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
     ClientData client_data;
     time_t elapsed;
     httpd_conn* hc = c->hc;
-    int tind;
+    int tind,i;
 	printf("start send the data\r\n");
 	/**对于没有限制的处理*/
     if ( c->max_limit == THROTTLE_NOLIMIT )
@@ -2021,7 +2021,12 @@ static void handle_send( connecttab* c, struct timeval* tvP )
 		iv[1].iov_base = &(hc->file_address[c->next_byte_index]);
 		iv[1].iov_len = MIN( c->end_byte_index - c->next_byte_index, max_bytes );
 		/**一次写两个数据块的数据*/
-		sz = writev( hc->conn_fd, iv, 2 );
+		//sz = writev( hc->conn_fd, iv, 2 );
+		for(i = 0 ;i<2 ; i++){
+			sz = 0;
+			sz = SSL_write(hc->ssl,iv[i].iov_base,iv[i].iov_len);
+			printf("the %d have write %d data\r\n",i,sz);
+		}
 	}
 	/**对于写数据错误的处理但是错误的值为eintr的处理*/
     if ( sz < 0 && errno == EINTR )
