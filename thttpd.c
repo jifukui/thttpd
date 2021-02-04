@@ -2403,6 +2403,7 @@ static void really_clear_connection( connecttab* c, struct timeval* tvP )
 		tmr_cancel( c->linger_timer );
 		c->linger_timer = 0;
 	}
+	
     c->conn_state = CNST_FREE;
     c->next_free_connect = first_free_connect;
     first_free_connect = c - connects;	/* division by sizeof is implied */

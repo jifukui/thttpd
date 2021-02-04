@@ -2854,6 +2854,7 @@ void httpd_close_conn( httpd_conn* hc, struct timeval* nowP )
 	}
     if ( hc->conn_fd >= 0 )
 	{
+		SSL_clear(c->hc->ssl);
 		(void) close( hc->conn_fd );
 		hc->conn_fd = -1;
 	}
