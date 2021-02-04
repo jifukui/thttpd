@@ -615,7 +615,7 @@ static void add_response( httpd_conn* hc, char* str )
 /* Send the buffered response. */
 void httpd_write_response( httpd_conn* hc )
 {
-	printf("start httpd_write_response1111 and length is %d\r\n",hc->responselen);
+	printf("start httpd_write_response1111 address and length is %d\r\n",hc,hc->responselen);
     /* If we are in a sub-process, turn off no-delay mode. */
     if ( sub_process )
 	{
