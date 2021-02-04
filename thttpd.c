@@ -1985,6 +1985,7 @@ static void handle_send( connecttab* c, struct timeval* tvP )
     time_t elapsed;
     httpd_conn* hc = c->hc;
     int tind;
+	printf("start send the data\r\n");
 	/**对于没有限制的处理*/
     if ( c->max_limit == THROTTLE_NOLIMIT )
 	{
