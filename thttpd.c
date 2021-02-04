@@ -1868,7 +1868,7 @@ static void handle_read( connecttab* c, struct timeval* tvP )
 		finish_connection( c, tvP );
 		return;
 	}
-	printf("the read data is %s\r\n",hc->read_buf[hc->read_idx]);
+	printf("the read data is %s\r\n",hc->read_buf);
 	/**更新读取数据的位置*/
     hc->read_idx += sz;
 	/**更新时间*/
