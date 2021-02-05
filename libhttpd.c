@@ -3640,8 +3640,8 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 	*/
     while ( c < hc->contentlength )
 	{
-		r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
-		//r = SSL_read(hc->ssl,buf,MIN( sizeof(buf), hc->contentlength - c ));
+		//r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
+		r = SSL_read(hc->ssl,buf,MIN( sizeof(buf), hc->contentlength - c ));
 		printf("the read num is %d\r\n",r);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
@@ -4799,7 +4799,39 @@ int httpd_read_fully( int fd, void* buf, size_t nbytes )
 
 
 /* Write the requested buffer completely, accounting for interruptions. */
-int httpd_write_fully(SSL *fd, const char* buf, size_t nbytes )
+/*int httpd_write_fully(int fd, const char* buf, size_t nbytes )
+    {
+    int nwritten;
+
+    nwritten = 0;
+    while ( nwritten < nbytes )
+	{
+		int r;
+
+		r = write( fd, buf + nwritten, nbytes - nwritten );
+		// jifukui
+		//printf("start write data\r\n");
+		//r = SSL_write(fd,buf + nwritten,nbytes - nwritten);
+		//printf("write data is %d\r\n",r);
+		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
+	    {
+	    	sleep( 1 );
+	    	continue;
+	    }
+		if ( r < 0 )
+	    {
+			return r;
+		}
+		if ( r == 0 )
+	    {
+			break;
+		}
+		nwritten += r;
+	}
+
+    return nwritten;
+}*/
+int httpd_write_fully(SSL * fd, const char* buf, size_t nbytes )
     {
     int nwritten;
 
@@ -4831,7 +4863,6 @@ int httpd_write_fully(SSL *fd, const char* buf, size_t nbytes )
 
     return nwritten;
 }
-
 
 /* Generate debugging statistics syslog message. */
 void httpd_logstats( long secs )
