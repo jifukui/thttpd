@@ -3852,6 +3852,7 @@ static void cgi_child( httpd_conn* hc )
     */
     if ( hc->conn_fd == STDIN_FILENO || hc->conn_fd == STDOUT_FILENO || hc->conn_fd == STDERR_FILENO )
 	{
+		printf("dup 2  start \r\n");
 		int newfd = dup2( hc->conn_fd, STDERR_FILENO + 1 );
 		if ( newfd >= 0 )
 	    {
@@ -3923,6 +3924,7 @@ static void cgi_child( httpd_conn* hc )
 		*/
 		if ( hc->conn_fd != STDIN_FILENO )
 	    {
+			printf("dup 2  start 1 \r\n");
 			(void) dup2( hc->conn_fd, STDIN_FILENO );
 		}
 	}
@@ -3977,10 +3979,12 @@ static void cgi_child( httpd_conn* hc )
 		/* Otherwise, the request socket is stdout/stderr. */
 		if ( hc->conn_fd != STDOUT_FILENO )
 	   	{
+			printf("dup 2  start 2\r\n");
 		    (void) dup2( hc->conn_fd, STDOUT_FILENO );
 	   	}
 		if ( hc->conn_fd != STDERR_FILENO )
 	    {
+			printf("dup 2  start 3\r\n");
 			(void) dup2( hc->conn_fd, STDERR_FILENO );
 		}
 	}
