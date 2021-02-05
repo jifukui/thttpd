@@ -4048,6 +4048,7 @@ static void cgi_child( httpd_conn* hc )
 static int cgi( httpd_conn* hc )
 {
     int r;
+	printf("good into the cgi \r\n");
     ClientData client_data;
 	/**判断是否是有效的CGI程序*/
     if ( hc->hs->cgi_limit != 0 && hc->hs->cgi_count >= hc->hs->cgi_limit )
