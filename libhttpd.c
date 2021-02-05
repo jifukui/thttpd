@@ -3621,7 +3621,7 @@ static char** make_argp( httpd_conn* hc )
 static void cgi_interpose_input( httpd_conn* hc, int wfd )
 {
 	//jifukui
-#if 0
+#if 1
     size_t c;
     ssize_t r;
     char buf[1024];
@@ -3640,7 +3640,9 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 	*/
     while ( c < hc->contentlength )
 	{
-		r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
+		//r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
+		r = SSL_read(hc->ssl,buf,MIN( sizeof(buf), hc->contentlength - c ));
+		printf("the read num is %d\r\n",r);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
 	    	sleep( 1 );
@@ -3716,6 +3718,7 @@ static void cgi_interpose_output( httpd_conn* hc, int rfd )
     for (;;)
 	{
 		r = read( rfd, buf, sizeof(buf) );
+		
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
 	    	sleep( 1 );
