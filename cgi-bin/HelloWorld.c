@@ -15,11 +15,11 @@ int main(){
 	{
 		//printf("load method over\r\n");
 	}
-	else if (SSL_CTX_use_certificate_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
+	else if (SSL_CTX_use_certificate_file(jifukuictx, "../thttpd.pem", SSL_FILETYPE_PEM) == 0)
 	{
 		//printf("cannot open certificate\r\n");
 	}
-	else if (SSL_CTX_use_PrivateKey_file(jifukuictx, "thttpd.pem", SSL_FILETYPE_PEM) == 0)
+	else if (SSL_CTX_use_PrivateKey_file(jifukuictx, "../thttpd.pem", SSL_FILETYPE_PEM) == 0)
 	{
 		//printf("cannot open PrivateKey\r\n");
 	}else{
