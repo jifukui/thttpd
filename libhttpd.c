@@ -3922,11 +3922,12 @@ static void cgi_child( httpd_conn* hc )
 		/**对于连接的文件描述符不是标准输入文件描述符的处理
 		 * 将当前的文件描述符的复制给标准输入文件描述符
 		*/
-		if ( hc->conn_fd != STDIN_FILENO )
+		/*if ( hc->conn_fd != STDIN_FILENO )
 	    {
 			printf("dup 2  start 1 \r\n");
 			(void) dup2( hc->conn_fd, STDIN_FILENO );
-		}
+		}*/
+		SSL_write(hc->ssl,"hello jifukui",14);
 	}
 
     /* Set up stdout/stderr.  If we're doing CGI header parsing,
@@ -4806,6 +4807,7 @@ int httpd_write_fully(SSL *fd, const char* buf, size_t nbytes )
 		// jifukui
 		printf("start write data\r\n");
 		r = SSL_write(fd,buf + nwritten,nbytes - nwritten);
+		printf("write data is %d\r\n",r);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
 	    	sleep( 1 );
