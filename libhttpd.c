@@ -3890,6 +3890,7 @@ static void cgi_child( httpd_conn* hc )
 	    }
 		/**创建管道成功*/
 		r = fork( );
+		printf("fork process %d\r\n",r);
 		/**创建子进程失败处理*/
 		if ( r < 0 )
 	    {
@@ -3907,6 +3908,7 @@ static void cgi_child( httpd_conn* hc )
 			/**关闭读管道*/
 	    	(void) close( p[0] );
 			/***/
+			printf("process cgi_interpose_input\r\n");
 	    	cgi_interpose_input( hc, p[1] );
 	    	exit( 0 );
 	    }
