@@ -3640,8 +3640,8 @@ static void cgi_interpose_input( httpd_conn* hc, int wfd )
 	*/
     while ( c < hc->contentlength )
 	{
-		//r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
-		r = SSL_read(hc->ssl,buf,MIN( sizeof(buf), hc->contentlength - c ));
+		r = read( hc->conn_fd, buf, MIN( sizeof(buf), hc->contentlength - c ) );
+		//r = SSL_read(hc->ssl,buf,MIN( sizeof(buf), hc->contentlength - c ));
 		printf("the read num is %d\r\n",r);
 		if ( r < 0 && ( errno == EINTR || errno == EAGAIN ) )
 	    {
@@ -3878,6 +3878,7 @@ static void cgi_child( httpd_conn* hc )
    	/**对于POST方式且需要读取的数据大于已经读取的数据的处理*/
     if ( hc->method == METHOD_POST && hc->read_idx > hc->checked_idx )
 	{
+		printf("the post\r\n");
 		int p[2];
 		/**创建管道失败的处理*/
 		if ( pipe( p ) < 0 )
@@ -3892,6 +3893,7 @@ static void cgi_child( httpd_conn* hc )
 		/**创建子进程失败处理*/
 		if ( r < 0 )
 	    {
+			printf("have some error\r\n");
 	    	syslog( LOG_ERR, "fork - %m" );
 	    	httpd_send_err( hc, 500, err500title, "", err500form, hc->encodedurl );
 	    	httpd_write_response( hc );
@@ -3922,13 +3924,13 @@ static void cgi_child( httpd_conn* hc )
 		/**对于连接的文件描述符不是标准输入文件描述符的处理
 		 * 将当前的文件描述符的复制给标准输入文件描述符
 		*/
-		/*if ( hc->conn_fd != STDIN_FILENO )
+		if ( hc->conn_fd != STDIN_FILENO )
 	    {
 			printf("dup 2  start 1 \r\n");
 			(void) dup2( hc->conn_fd, STDIN_FILENO );
-		}*/
-		printf("is post method\r\n");
-		SSL_write(hc->ssl,"hello jifukui",14);
+		}
+		//printf("is post method\r\n");
+		//SSL_write(hc->ssl,"hello jifukui",14);
 	}
 
     /* Set up stdout/stderr.  If we're doing CGI header parsing,
