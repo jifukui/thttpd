@@ -3927,6 +3927,7 @@ static void cgi_child( httpd_conn* hc )
 			printf("dup 2  start 1 \r\n");
 			(void) dup2( hc->conn_fd, STDIN_FILENO );
 		}*/
+		printf("is post method\r\n");
 		SSL_write(hc->ssl,"hello jifukui",14);
 	}
 
