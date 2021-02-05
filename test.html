@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Cookie</title>
+    <script src="jquery-3.3.1.js"></script>
+    <script src="axios.js"></script>
+    <script>
+        var value={};
+		value.data="version";
+        function test()
+        {
+            axios.get('/cgi-bin/hello',{params:{update:value}}).then(function(msg){
+			if (msg.status == "success") {
+                            console.log("good for this ")    
+                    }
+                    else {
+                        console.log("The value is "+msg.status);
+                    }
+            })
+        }
+		function test1()
+        {
+            axios.post('/cgi-bin/hello',value).then(function(msg){
+			if (msg.status == "success") {
+                            console.log("good for this ")    
+                    }
+                    else {
+                        console.log("The value is "+msg.status);
+                    }
+            })
+        }
+    </script>
+    <style>
+    </style>
+</head>
+<body>
+<div>
+    liguo WebServer for test  Get Command
+    <input type="button" onclick="test()" value="点击发送Get命令">
+</div>
+<div>
+    liguo WebServer for test Post Command
+    <input type="button" onclick="test1()" value="点击发送Post命令">
+</div>
+</body>
+</html>
