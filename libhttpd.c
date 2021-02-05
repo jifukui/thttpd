@@ -4111,7 +4111,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
     char* pi;
 
     expnlen = strlen( hc->expnfilename );
-
+	printf("the cgi path is %s\r\n",hc->hs->cgi_pattern);
     /* Stat the file. */
 	/**获取文件的状态，
 	 * 并对于有错误的文件进行错误处理
@@ -4323,6 +4323,7 @@ static int really_start_request( httpd_conn* hc, struct timeval* nowP )
 
     /* Is it world-executable and in the CGI area? */
 	/**对于文件是cgi文件的处理*/
+	
     if ( hc->hs->cgi_pattern != (char*) 0 &&( hc->sb.st_mode & S_IXOTH ) &&match( hc->hs->cgi_pattern, hc->expnfilename ) )
 	{
 		return cgi( hc );
